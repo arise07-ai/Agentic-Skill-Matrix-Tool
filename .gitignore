@@ -154,3 +154,19 @@ __pycache__/
 venv/
 .venv/
 env/
+
+# macOS / editors
+.DS_Store
+.idea/
+.vscode/
+
+# Python caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# App data: employee records, uploads, vector index, evaluation logs
+backend/data/
+*.db
+*.sqlite
+*.sqlite3
