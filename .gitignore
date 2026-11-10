@@ -136,3 +136,10 @@ env/
 railway.env.backend.ready
 
 railway.env.backend.ready
+
+.DS_Store
+
+!backend/app/data/
+!backend/app/data/**
+
+railway.env.backend.ready
