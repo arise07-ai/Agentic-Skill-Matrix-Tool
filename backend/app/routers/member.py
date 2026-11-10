@@ -64,7 +64,7 @@ def profile(user: dict = Depends(member_user)):
     tax, _ = standardization.index()
     plans = db.rows("SELECT id, title, markdown, requirements, weeks, hours_per_week, mode, approved_by, created_at FROM learning_plans "
                     "WHERE employee_id=? ORDER BY id DESC LIMIT 20", (user["employee_id"],))
-    return {"user": user, "employee": emp, **_approver(user),
+    return {"user": {k: v for k, v in user.items() if k != "session_id"}, "employee": emp, **_approver(user),
             "skill_options": [{"name": n, "category": m["category"]} for n, m in sorted(tax.items(), key=lambda kv: (kv[1]["category"], kv[0]))],
             "learning_plans": plans}
 

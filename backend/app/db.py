@@ -163,6 +163,19 @@ CREATE TABLE IF NOT EXISTS requested_skills (
   first_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   last_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+-- Login sessions. A user has at most ONE open session (ended_at IS NULL): a new login ends the previous one.
+-- device is a short label such as "Chrome on macOS"; the raw user agent and the IP address are not stored. Times are UTC.
+CREATE TABLE IF NOT EXISTS user_sessions (
+  id TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  device TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  expires_at TEXT NOT NULL,
+  ended_at TEXT,
+  end_reason TEXT NOT NULL DEFAULT ''
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_one_open_session ON user_sessions(user_id) WHERE ended_at IS NULL;
 """
 
 

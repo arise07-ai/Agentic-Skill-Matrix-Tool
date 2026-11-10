@@ -5,8 +5,9 @@ Roles:  admin | project_manager | team_leader | hr_manager | member
   makes waits for that member's team leader (users.team_leader_id, set by an admin or HR manager).
 * Passwords are stored as scrypt hashes (standard library). Nothing secret is in the code: the signing secret and the first
   admin account come from the environment (AUTH_SECRET, ADMIN_USERNAME, ADMIN_PASSWORD).
-* A session is a signed token in an HttpOnly cookie. It stops working when the user is disabled, the password changes,
-  or it expires (SESSION_HOURS).
+* A session is a row in user_sessions plus a signed token (with the session id) in an HttpOnly cookie. A user has ONE open
+  session: a new login ends the previous one. A session stops working when it is replaced, the user logs out, an admin ends
+  it, the user is disabled or their password or role changes, or it expires (SESSION_HOURS).
 """
 import base64
 import hashlib
@@ -57,29 +58,106 @@ def _secret() -> bytes:
     return (get_settings().auth_secret or _fallback_secret).encode()
 
 
-def make_token(user: dict) -> str:
+def make_token(user: dict, session_id: str) -> str:
     exp = int(time.time()) + get_settings().session_hours * 3600
-    body = base64.urlsafe_b64encode(json.dumps({"uid": user["id"], "v": user["token_version"], "exp": exp}).encode()).decode()
+    body = base64.urlsafe_b64encode(json.dumps({"uid": user["id"], "v": user["token_version"], "sid": session_id, "exp": exp}).encode()).decode()
     sig = hmac.new(_secret(), body.encode(), hashlib.sha256).hexdigest()
     return f"{body}.{sig}"
 
 
-def user_from_token(token: str | None) -> dict | None:
-    if not token or "." not in token:
+# Why a session stopped working, in words for the person (shown on the login page). "missing" = never signed in.
+SIGNED_OUT = {
+    "replaced": "You were signed out because your account was signed in on another device.",
+    "ended_by_admin": "An administrator ended your session. Please sign in again.",
+    "account_changed": "Your account was changed by an administrator. Please sign in again.",
+    "expired": "Your session expired. Please sign in again.",
+    "logout": "You signed out. Please sign in again.",
+}
+
+
+def device_label(user_agent: str) -> str:
+    """'Chrome on macOS' from a User-Agent header. Only this label is stored, never the raw header."""
+    ua = user_agent or ""
+    browser = next((name for key, name in (("Edg/", "Edge"), ("OPR/", "Opera"), ("Firefox/", "Firefox"), ("Chrome/", "Chrome"),
+                                           ("CriOS/", "Chrome"), ("Safari/", "Safari")) if key in ua), "Unknown browser")
+    system = next((name for key, name in (("iPhone", "iOS"), ("iPad", "iPadOS"), ("Android", "Android"), ("Windows", "Windows"),
+                                          ("Mac OS X", "macOS"), ("CrOS", "ChromeOS"), ("Linux", "Linux")) if key in ua), "unknown system")
+    return f"{browser} on {system}"
+
+
+def start_session(user_id: int, user_agent: str = "") -> str:
+    """Open a new session for this user and end the one they had (one open session per user). -> the cookie token."""
+    u = db.one("SELECT * FROM users WHERE id=?", (user_id,))
+    sid = secrets.token_urlsafe(24)
+    with db.connect() as c:  # one transaction: SQLite serializes writers, so two logins at once still leave one open session
+        replaced = c.execute("UPDATE user_sessions SET ended_at=CURRENT_TIMESTAMP, end_reason='replaced' WHERE user_id=? AND ended_at IS NULL",
+                             (user_id,)).rowcount
+        c.execute("INSERT INTO user_sessions(id, user_id, device, expires_at) VALUES (?,?,?,datetime('now', ?))",
+                  (sid, user_id, device_label(user_agent), f"+{get_settings().session_hours} hours"))
+    if replaced:
+        audit(public(u), "session_replaced", {"device": device_label(user_agent)})
+    return make_token(u, sid)
+
+
+def end_sessions(user_id: int, reason: str) -> int:
+    with db.connect() as c:
+        return c.execute("UPDATE user_sessions SET ended_at=CURRENT_TIMESTAMP, end_reason=? WHERE user_id=? AND ended_at IS NULL",
+                         (reason, user_id)).rowcount
+
+
+def end_session(session_id: str, reason: str) -> dict | None:
+    """End one open session. -> the session's user (public) or None when it was not open."""
+    s = db.one("SELECT user_id FROM user_sessions WHERE id=? AND ended_at IS NULL", (session_id,))
+    if not s:
         return None
+    with db.connect() as c:
+        c.execute("UPDATE user_sessions SET ended_at=CURRENT_TIMESTAMP, end_reason=? WHERE id=? AND ended_at IS NULL", (reason, session_id))
+    u = db.one("SELECT * FROM users WHERE id=?", (s["user_id"],))
+    return public(u) if u else None
+
+
+def session_from_token(token: str | None) -> tuple[dict | None, str]:
+    """-> (public user with "session_id", "") for a valid open session, else (None, reason) with a key of SIGNED_OUT or "missing"."""
+    if not token or "." not in token:
+        return None, "missing"
     body, sig = token.rsplit(".", 1)
     if not hmac.compare_digest(hmac.new(_secret(), body.encode(), hashlib.sha256).hexdigest(), sig):
-        return None
+        return None, "missing"
     try:
         data = json.loads(base64.urlsafe_b64decode(body.encode()))
     except ValueError:
-        return None
-    if data.get("exp", 0) < time.time():
-        return None
+        return None, "missing"
+    sid = data.get("sid")
+    if not sid:  # a cookie from before sessions were stored: sign in once more
+        return None, "expired"
+    s = db.one("SELECT * FROM user_sessions WHERE id=? AND user_id=?", (sid, data.get("uid")))
+    if not s:
+        return None, "expired"
+    if s["ended_at"]:
+        return None, s["end_reason"] if s["end_reason"] in SIGNED_OUT else "expired"
     u = db.one("SELECT * FROM users WHERE id=?", (data.get("uid"),))
     if not u or not u["active"] or u["token_version"] != data.get("v"):
-        return None
-    return public(u)
+        end_session(sid, "account_changed")
+        return None, "account_changed"
+    if data.get("exp", 0) < time.time() or db.one("SELECT 1 AS x FROM user_sessions WHERE id=? AND expires_at <= datetime('now')", (sid,)):
+        end_session(sid, "expired")
+        return None, "expired"
+    with db.connect() as c:  # at most one write a minute per session
+        c.execute("UPDATE user_sessions SET last_seen_at=CURRENT_TIMESTAMP WHERE id=? AND last_seen_at < datetime('now', '-60 seconds')", (sid,))
+    return {**public(u), "session_id": sid}, ""
+
+
+def session_info(session_id: str) -> dict | None:
+    s = db.one("SELECT device, created_at, last_seen_at, expires_at FROM user_sessions WHERE id=?", (session_id,))
+    return dict(s) if s else None
+
+
+def open_sessions() -> list[dict]:
+    """Every open, unexpired session (one per user at most), newest activity first. For the admin."""
+    return db.rows("""SELECT s.id, s.device, s.created_at, s.last_seen_at, s.expires_at, u.id AS user_id, u.username,
+                             COALESCE(NULLIF(u.display_name, ''), u.username) AS display_name, u.role
+                      FROM user_sessions s JOIN users u ON u.id = s.user_id
+                      WHERE s.ended_at IS NULL AND s.expires_at > datetime('now') ORDER BY s.last_seen_at DESC""")
 
 
 def public(u: dict) -> dict:
@@ -198,6 +276,8 @@ def update_user(user_id: int, actor: dict, role: str | None = None, active: bool
     if sets:
         with db.connect() as c:
             c.execute(f"UPDATE users SET {', '.join(sets)} WHERE id=?", (*params, user_id))
+    if role is not None or active is not None or password:
+        end_sessions(user_id, "account_changed")
     audit(actor, "user_updated", {"user": u["username"], **changes})
     return public(db.one("SELECT * FROM users WHERE id=?", (user_id,)))
 

@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { post, resetProjectDraft } from "@/lib/api";
+import { post, resetProjectDraft, SIGNED_OUT_KEY } from "@/lib/api";
 import { Alert } from "@/components/ui";
 
 export default function LoginPage() {
@@ -10,11 +10,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [signedOut, setSignedOut] = useState<string | null>(null);
+
+  useEffect(() => { // why the previous session ended, saved by lib/api.ts; shown once
+    try { setSignedOut(sessionStorage.getItem(SIGNED_OUT_KEY)); sessionStorage.removeItem(SIGNED_OUT_KEY); } catch {}
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true); setError(null);
-    try { await post("/api/auth/login", { username, password }); resetProjectDraft(); router.replace("/"); }
+    try { await post("/api/auth/login", { username, password }); setSignedOut(null); resetProjectDraft(); router.replace("/"); }
     catch (err) { setError((err as Error).message); }
     finally { setBusy(false); }
   }
@@ -43,6 +48,7 @@ export default function LoginPage() {
           <h1>Welcome back</h1>
           <p>Sign in with the account an administrator created for you.</p>
         </div>
+        {signedOut && !error && <Alert tone="warn">{signedOut}</Alert>}
         {error && <Alert tone="bad">{error}</Alert>}
         <div className="login-fields">
           <label className="f" htmlFor="u">Username</label>

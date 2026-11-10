@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
-import { post, useApi } from "@/lib/api";
-import type { AuditRow, Role, User } from "@/lib/types";
+import { localTime, post, useApi } from "@/lib/api";
+import type { AuditRow, OpenSession, Role, User } from "@/lib/types";
 import { Alert, Loading, Pill } from "@/components/ui";
 import { useUser } from "@/components/AppFrame";
 
@@ -11,6 +11,7 @@ export default function AdminPage() {
   const { user } = useUser();
   const users = useApi<User[]>(user?.role === "admin" ? "/api/auth/users" : null);
   const audit = useApi<AuditRow[]>(user?.role === "admin" ? "/api/auth/audit?limit=200" : null);
+  const sessions = useApi<OpenSession[]>(user?.role === "admin" ? "/api/auth/sessions" : null);
   const [f, setF] = useState({ username: "", password: "", role: "project_manager" as Role, display_name: "" });
   const [msg, setMsg] = useState<{ tone: "ok" | "bad"; text: string } | null>(null);
 
@@ -24,6 +25,14 @@ export default function AdminPage() {
     e.preventDefault();
     try { await post("/api/auth/users", f); setMsg({ tone: "ok", text: `User ${f.username} created.` }); setF({ ...f, username: "", password: "", display_name: "" }); users.reload(); audit.reload(); }
     catch (err) { setMsg({ tone: "bad", text: (err as Error).message }); }
+  }
+  async function endSession(s: OpenSession) {
+    const self = s.user_id === user?.id;
+    if (!confirm(self ? "End your own session? You will be signed out." : `Sign ${s.display_name} out now?`)) return;
+    try {
+      await post(`/api/auth/sessions/${encodeURIComponent(s.id)}/end`, {});
+      setMsg({ tone: "ok", text: `${s.display_name} was signed out.` }); sessions.reload(); audit.reload();
+    } catch (e) { setMsg({ tone: "bad", text: (e as Error).message }); }
   }
   function resetPassword(u: User) {
     const p = prompt(`New password for ${u.username} (at least 10 characters):`);
@@ -67,6 +76,30 @@ export default function AdminPage() {
             ))}
           </tbody>
         </table></div>
+      </div>
+
+      <div className="card">
+        <h2>Active sessions</h2>
+        <p className="muted">Each user can be signed in on one device at a time; signing in somewhere else ends the earlier session. Times are in your time zone.</p>
+        {sessions.loading && <Loading />}
+        {sessions.error && <Alert tone="bad">{sessions.error}</Alert>}
+        {sessions.data && sessions.data.length === 0 && <p className="muted">Nobody is signed in.</p>}
+        {!!sessions.data?.length && (
+          <div className="tablewrap"><table>
+            <thead><tr><th>User</th><th>Role</th><th>Device</th><th>Signed in</th><th>Last activity</th><th /></tr></thead>
+            <tbody>
+              {sessions.data.map((s) => (
+                <tr key={s.id}>
+                  <td>{s.display_name}<br /><span className="muted">{s.username}</span></td>
+                  <td>{s.role}</td><td>{s.device}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>{localTime(s.created_at)}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>{localTime(s.last_seen_at)}</td>
+                  <td><button className="btn ghost sm" onClick={() => endSession(s)}>{s.user_id === user?.id ? "End (you)" : "Sign out"}</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table></div>
+        )}
       </div>
 
       <div className="card">

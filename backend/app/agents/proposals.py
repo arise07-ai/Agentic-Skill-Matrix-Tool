@@ -334,6 +334,29 @@ def decide(proposal_id: int, user: dict, action: str, note: str = "", edits: dic
         if p["kind"] in ("project_assignment", "project_dates"):
             raise PermissionError("Only an HR manager (or an admin) can approve this")
         raise PermissionError(f"Only a {need} can decide this kind of proposal")
+    if action not in ("approve", "reject"):
+        raise ValueError("action must be 'approve' or 'reject'")
+    # Claim the proposal before applying it: of two people (or tabs) deciding at the same moment, only one gets past this line.
+    with db.connect() as c:
+        claimed = c.execute("UPDATE agent_proposals SET status='deciding' WHERE id=? AND status='pending'", (proposal_id,)).rowcount
+    if not claimed:
+        now = db.one("SELECT status FROM agent_proposals WHERE id=?", (proposal_id,))
+        raise ValueError(f"This proposal was already decided ({now['status'] if now else 'removed'})")
+    try:
+        status, payload, result = _decide_claimed(p, user, action, edits)
+    except BaseException:
+        with db.connect() as c:  # nothing was decided: give it back to the queue
+            c.execute("UPDATE agent_proposals SET status='pending' WHERE id=? AND status='deciding'", (proposal_id,))
+        raise
+    with db.connect() as c:
+        c.execute("UPDATE agent_proposals SET status=?, decided_by=?, decided_at=CURRENT_TIMESTAMP, note=?, payload=? WHERE id=? AND status='deciding'",
+                  (status, user["username"], _clean(note, 500), json.dumps(payload, ensure_ascii=False), proposal_id))
+    auth.audit(user, f"proposal_{status}", {"proposal": proposal_id, "kind": p["kind"], "title": p["title"], "agent": p["agent"]})
+    return {"status": status, **result}
+
+
+def _decide_claimed(p: dict, user: dict, action: str, edits: dict | None) -> tuple[str, dict, dict]:
+    """Apply or reject a proposal this request has claimed. -> (status, payload as decided, result)."""
     payload = json.loads(p["payload"])
     result: dict = {}
     if action == "approve":
@@ -354,13 +377,13 @@ def decide(proposal_id: int, user: dict, action: str, note: str = "", edits: dic
                 requested.decide(payload["raw_skill"], "dismiss")
             except LookupError:
                 pass
-    else:
-        raise ValueError("action must be 'approve' or 'reject'")
+    return status, payload, result
+
+
+def release_interrupted_decisions() -> int:
+    """Proposals left 'deciding' by a restart go back to 'pending' so a person can decide them again."""
     with db.connect() as c:
-        c.execute("UPDATE agent_proposals SET status=?, decided_by=?, decided_at=CURRENT_TIMESTAMP, note=?, payload=? WHERE id=?",
-                  (status, user["username"], _clean(note, 500), json.dumps(payload, ensure_ascii=False), proposal_id))
-    auth.audit(user, f"proposal_{status}", {"proposal": proposal_id, "kind": p["kind"], "title": p["title"], "agent": p["agent"]})
-    return {"status": status, **result}
+        return c.execute("UPDATE agent_proposals SET status='pending' WHERE status='deciding'").rowcount
 
 
 # ----------------------------------------------------------------------------- applying

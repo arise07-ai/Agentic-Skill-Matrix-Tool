@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from . import db
 from .config import get_settings
 from .deps import current_user, staff_user
-from .agents import runtime as agent_runtime
+from .agents import proposals, runtime as agent_runtime
 from .routers import agents as agents_router
 from .routers import auth as auth_router
 from .routers import assignments as assignments_router, data, member, projects, roles as roles_router, uploads
@@ -45,6 +45,9 @@ async def lifespan(_: FastAPI):
     n = agent_runtime.fail_orphaned_runs()
     if n:
         log.info("Marked %d interrupted agent run(s) as failed", n)
+    n = proposals.release_interrupted_decisions()
+    if n:
+        log.info("Returned %d interrupted proposal decision(s) to the approval queue", n)
     # Vector indexing may call the embeddings API / Chroma and can be slow or hang (bad network, first-run
     # downloads). Run it in the background so the server starts listening immediately.
     threading.Thread(target=_warm_vectors, name="taxonomy-warmup", daemon=True).start()

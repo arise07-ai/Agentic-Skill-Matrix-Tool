@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
 
 from ..config import get_settings
@@ -36,25 +36,22 @@ class TeamLeaderBody(BaseModel):
 
 
 @router.post("/login")
-def login(body: LoginBody, response: Response):
+def login(body: LoginBody, request: Request, response: Response):
+    """Signs in and ends the session this user had anywhere else (one open session per user)."""
     try:
         user = auth.login(body.username, body.password)
     except PermissionError as e:
         raise HTTPException(401, str(e))
     s = get_settings()
-    response.set_cookie(auth.COOKIE, auth.make_token(db_user(user["id"])), httponly=True, samesite="lax",
-                        secure=s.auth_cookie_secure, max_age=s.session_hours * 3600, path="/")
+    token = auth.start_session(user["id"], request.headers.get("user-agent", ""))
+    response.set_cookie(auth.COOKIE, token, httponly=True, samesite="lax", secure=s.auth_cookie_secure, max_age=s.session_hours * 3600, path="/")
     return user
-
-
-def db_user(user_id: int) -> dict:
-    from .. import db
-
-    return db.one("SELECT * FROM users WHERE id=?", (user_id,))
 
 
 @router.post("/logout")
 def logout(response: Response, user: dict = Depends(current_user)):
+    """Ends the session on the server too, so the cookie cannot be used again. A user has one session, so this signs them out everywhere."""
+    auth.end_session(user["session_id"], "logout")
     auth.audit(user, "logout", {})
     response.delete_cookie(auth.COOKIE, path="/")
     return {"ok": True}
@@ -62,7 +59,25 @@ def logout(response: Response, user: dict = Depends(current_user)):
 
 @router.get("/me")
 def me(user: dict = Depends(current_user)):
-    return user
+    """The user and their current session (device label and times, UTC). The session id itself is not sent to the page."""
+    sid = user.pop("session_id")
+    return {**user, "session": auth.session_info(sid)}
+
+
+@router.get("/sessions")
+def sessions(user: dict = Depends(require_roles())):
+    """Admin: every open session (one per user at most)."""
+    return auth.open_sessions()
+
+
+@router.post("/sessions/{session_id}/end")
+def end_session(session_id: str, user: dict = Depends(require_roles())):
+    """Admin: sign one user out. Their next request goes to the login page with a message."""
+    target = auth.end_session(session_id, "ended_by_admin")
+    if not target:
+        raise HTTPException(404, "That session has already ended")
+    auth.audit(user, "session_ended_by_admin", {"user": target["username"]})
+    return {"ok": True}
 
 
 @router.get("/users")

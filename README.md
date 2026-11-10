@@ -1,5 +1,7 @@
 # AI Integration: where to customize
 
+**Live app:** <https://aiskillmatrix.up.railway.app/> (sign-in required; accounts are created by an administrator).
+
 All model-related code lives in **`backend/app/ai/`**. The rest of the app never imports OpenAI, LangChain or Chroma directly; it calls the small interfaces in this folder. The same map is shown live in the app under **AI integration** (sidebar), which reports which components are configured. It never shows secret values.
 
 > **Secrets:** nothing is hardcoded. Set keys as environment variables or in your platform's secret store (Docker secrets, Vercel/Railway/Render env, Kubernetes Secrets, ...). For local work copy `.env.example` to `.env` (git-ignored).
@@ -50,7 +52,31 @@ Responses say which mode produced them (`mode`: `llm` / `heuristic` / `template`
 
 ## Production on Railway
 
-Two services (backend with a volume at `/app/data`, frontend), deployed from a private GitHub repo with the Dockerfiles in `backend/` and `frontend/`. The backend runs as **one instance** because background jobs and the login lock-out live in its memory. Set `AUTH_COOKIE_SECURE=true`, `EVAL_LOG_ENABLED=false`, `HF_HOME=/app/data/hf_cache` and all keys as service variables, never in the repo. Production installs `requirements.txt` (pinned by `requirements.lock`); `ragas` is only in `requirements-eval.txt`. Health check: `GET /api/health`. The frontend proxies `/api/*` to the backend; `BACKEND_URL` is read at build time. Step-by-step: `RAILWAY_DEPLOY.md`.
+Two services (backend with a volume at `/app/data`, frontend), deployed from a private GitHub repo with the Dockerfiles in `backend/` and `frontend/`. The backend runs as **one instance** because background jobs and the login lock-out live in its memory. Set `AUTH_COOKIE_SECURE=true`, `EVAL_LOG_ENABLED=false`, `HF_HOME=/app/data/hf_cache` and all keys as service variables, never in the repo. Production installs `requirements.txt` (pinned by `requirements.lock`); `ragas` is only in `requirements-eval.txt`. Health check: `GET /api/health`. The frontend proxies `/api/*` to the backend; `BACKEND_URL` is read at build time. Keep `AUTH_SECRET` set: without it every restart signs everyone out. Step-by-step: `RAILWAY_DEPLOY.md`.
+
+## Sign-in and sessions
+
+**One session per user.** Each account can be signed in on one device at a time. Signing in somewhere else ends the earlier session (newest login wins), so nobody is locked out by a browser they forgot to log out of. Sessions are stored in the `user_sessions` table (`services/auth.py`, `routers/auth.py`); the cookie (`sm_session`) is signed with `AUTH_SECRET` and carries the session id, and every request checks that the session is still open. A partial unique index makes the database itself refuse a second open session for the same user.
+
+**When a session ends**, the next request returns 401 with the reason, and the login page shows it once:
+
+| Cause | Message on the login page |
+|---|---|
+| The account signed in on another device | You were signed out because your account was signed in on another device. |
+| An admin ended the session | An administrator ended your session. Please sign in again. |
+| An admin changed the password or role, or disabled the account | Your account was changed by an administrator. Please sign in again. |
+| `SESSION_HOURS` (default 12) passed | Your session expired. Please sign in again. |
+| The user logged out | None in the tab where they logged out; another open tab shows: You signed out. Please sign in again. |
+
+**Log out** ends the session on the server, not only in the browser, so a copied cookie stops working at once. With one session per user, Log out also means "log out everywhere".
+
+**Who sees sessions.** Each user sees their own session under their name in the sidebar ("Signed in … · Chrome on macOS"). The admin sees every open session on **Users & audit log → Active sessions** (user, role, device, signed-in time, last activity) and can sign anyone out; this is recorded in the audit log (`session_ended_by_admin`), as is a login that replaced another session (`session_replaced`). Endpoints: `GET /api/auth/me` (includes `session`), `GET /api/auth/sessions` and `POST /api/auth/sessions/{id}/end` (admin only).
+
+**What is stored per session:** a short device label (browser and operating system, e.g. "Chrome on macOS"), the sign-in time, the last activity (updated at most once a minute) and the expiry, all in UTC. The raw User-Agent and the IP address are not stored.
+
+**After deploying this change**, everyone has to sign in once more: cookies from before it carry no session id.
+
+**Approvals are decided once.** Deciding a proposal first claims it (`pending` → `deciding`) and only the request that wins the claim applies it (`agents/proposals.py`). Two people or tabs approving at the same moment apply the change once; the other gets "This proposal was already decided". If applying fails, the proposal goes back to `pending`, and proposals left in `deciding` by a restart are returned to the queue at start-up.
 
 ## Status of each piece (honest list)
 
@@ -65,7 +91,8 @@ Last updated: 10 November 2026.
 
 **Not verified in a live setting**
 - Redis (the in-memory fallback is what was exercised), Langfuse / LangSmith tracing, the Udemy Affiliate API (sample data only), and Unsloth fine-tuning (instructions only, no trained model served).
-- A real Railway deployment (files and variables prepared, not yet deployed when this was written).
+- A full check of the Railway deployment. It is live at <https://aiskillmatrix.up.railway.app/>, but not every component above has been verified there.
+- One session per user, the session list and the single-decision approvals: covered by unit tests (`tests/test_sessions.py`) and an end-to-end run against the API on a temporary database, not yet tried in a browser or on Railway.
 - Evaluation is on a small fictional set (about 33 chat, 15 learning, 9 coach cases, 21 standardization cases): use the numbers to catch regressions, not as a quality guarantee.
 
 **Open items**

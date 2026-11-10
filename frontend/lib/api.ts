@@ -2,20 +2,31 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Requirement } from "./types";
 
+export const SIGNED_OUT_KEY = "sm_signed_out_reason";
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, init);
-  if (res.status === 401 && !path.startsWith("/api/auth/login") && typeof window !== "undefined" && window.location.pathname !== "/login") {
-    window.location.href = "/login"; // session ended or never started
-  }
   if (!res.ok) {
     let msg = res.statusText;
     try {
       const j = await res.json();
       msg = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail ?? j);
     } catch {}
+    if (res.status === 401 && !path.startsWith("/api/auth/login") && typeof window !== "undefined" && window.location.pathname !== "/login") {
+      // the session ended or never started; the login page shows why (e.g. "signed in on another device")
+      try { if (msg && msg !== "Please log in") sessionStorage.setItem(SIGNED_OUT_KEY, msg); } catch {}
+      window.location.href = "/login";
+    }
     throw new Error(msg || `Request failed (${res.status})`);
   }
   return res.json() as Promise<T>;
+}
+
+/** A server time in UTC ("YYYY-MM-DD HH:MM:SS") shown in the viewer's own time zone. */
+export function localTime(utc: string | null | undefined): string {
+  if (!utc) return "";
+  const d = new Date(utc.replace(" ", "T") + "Z");
+  return Number.isNaN(d.getTime()) ? utc : d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
 export function post<T>(path: string, body: unknown, method = "POST"): Promise<T> {

@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useUser } from "./AppFrame";
-import { api, resetProjectDraft } from "@/lib/api";
+import { api, localTime, resetProjectDraft } from "@/lib/api";
 
 export default function Nav() {
   const path = usePathname();
@@ -88,6 +88,11 @@ export default function Nav() {
         <div className="whoami">
           <strong>{user.display_name}</strong>
           <span className="muted">{user.role_label}</span>
+          {user.session && (
+            <span className="muted whoami__session" title="You can be signed in on one device at a time. Signing in somewhere else signs you out here.">
+              Signed in {localTime(user.session.created_at)} · {user.session.device}
+            </span>
+          )}
           <button className="btn ghost sm" onClick={logout}>Log out</button>
         </div>
       )}

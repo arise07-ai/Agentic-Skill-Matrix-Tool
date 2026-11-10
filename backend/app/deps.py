@@ -5,9 +5,10 @@ from .services import auth
 
 
 def current_user(sm_session: str | None = Cookie(default=None)) -> dict:
-    user = auth.user_from_token(sm_session)
+    """The logged-in user (with "session_id"). A 401 says why the session stopped, so the login page can tell the person."""
+    user, reason = auth.session_from_token(sm_session)
     if not user:
-        raise HTTPException(401, "Please log in")
+        raise HTTPException(401, auth.SIGNED_OUT.get(reason, "Please log in"))
     return user
 
 

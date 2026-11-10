@@ -93,7 +93,11 @@ export type Role = "admin" | "project_manager" | "team_leader" | "hr_manager" | 
 export type User = {
   id: number; username: string; display_name: string; role: Role; role_label: string; active: boolean; created_at?: string;
   employee_id?: number | null; team_leader_id?: number | null; employee_name?: string | null; team_leader_name?: string | null;
+  session?: SessionInfo | null; // only on /api/auth/me: the current login
 };
+/** Times are UTC "YYYY-MM-DD HH:MM:SS" from the server. device is a short label such as "Chrome on macOS". */
+export type SessionInfo = { device: string; created_at: string; last_seen_at: string; expires_at: string };
+export type OpenSession = SessionInfo & { id: string; user_id: number; username: string; display_name: string; role: Role };
 export type MemberAccount = User & { employee_name: string | null; team_leader_name: string | null };
 export type TeamLeaderOption = { id: number; name: string; username: string };
 export type MemberProfile = {
