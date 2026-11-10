@@ -1,272 +1,74 @@
-# AI-Powered Skill Matrix App
-
-A web app that standardizes employee skill data, predicts skill gaps, suggests project teams, and builds personalized learning paths.
-Users are project managers, team leaders, HR managers and admins.
-
-**Stack:** Next.js (UI) · FastAPI (API) · SQLite (data) · Chroma (vector search) · an LLM provider (OpenAI models).
-
----
-
-## 1. Design principle: AI proposes, code verifies, a person approves
-
-The model does language and judgement work. Code owns every fact. A person approves anything that changes the matrix.
-
-| Who | Does what |
-| --- | --- |
-| **The model** | Reads messy files, maps skill names, extracts requirements, estimates risk, chooses learning resources, writes short texts. |
-| **Code** | Ratings, hours, schedules, eligibility, seniority, and the checks on everything the model returns. |
-| **A person** | Approves changes through the approval queue, and may edit learning plans. |
-
-A rejected or failed model output never reaches the user: the app falls back to a rule-based result (or shows only the computed numbers). The app still works with no model configured; AI features then use their heuristic fallback.
-
----
-
-## 2. Skill levels (0–4)
-
-| Level | Name |
-| --- | --- |
-| 0 | None |
-| 1 | Learned |
-| 2 | Applied |
-| 3 | Experienced |
-| 4 | Mastered |
-
-- A skill rated 0 is not stored (a missing skill and a 0 mean the same).
-- Project requirements use levels 1–4 (default 2).
-- A rating outside 0–4 (for example 5, or `4/5` from the old scale) is **not guessed**: the skill is kept without a rating and a warning is shown.
-- Colours in the matrix reuse the existing CSS ramp `r1`–`r5` as level + 1.
-
----
-
-## 3. Features
-
-### Upload (Excel `.xlsx/.xlsm`, PDF)
-- Reads employees with name, number, roles, skills, ratings, background and optional domain tags.
-- Column mapping, sheet and layout (one row per employee, or per employee-skill) can be corrected; the preview shows warnings.
-- Each employee gets a **Junior / Mid / Senior** label computed from the skill levels.
-- Import modes: merge (update existing, add new) or replace.
-
-### Single CV (PDF or Word `.docx`)
-1. Text is read from the file (`.docx` from its XML; DOCTYPE/ENTITY XML is refused).
-2. The model estimates skill levels (maximum 3) and quotes the sentence it used.
-3. Code checks each quote is in the CV. An unverified quote sets the level to 1 and flags it; a skill the CV never mentions is dropped.
-4. The uploader reviews and edits, then sends it to the approval queue (kind `employee_profile`, decided by an HR manager or admin).
-5. A new person is created; for an existing person (same number, or the one person with that name) only missing skills and roles are added. Existing ratings are kept and nothing is removed.
-
-### Standardization
-Maps raw skill names to a canonical taxonomy (exact match, alias, fuzzy/semantic, model). Low-certainty mappings are listed for review.
-
-### Skill matrix, employees, dashboard
-Matrix of people × skills, employee profiles with seniority and level names, and a dashboard (mean level, most common skills, single points of failure at level 3+, level distribution, categories).
-
-### Project planner
-- Extracts required skills from a project description for the user to confirm.
-- **Predicted gaps:** coverage, people one level short, best level in the company, risk, upskilling candidates. A short AI forecast narrative sits next to the numbers.
-- **Suggested staffing:** team built skill-first, with a short AI "why this team" summary, additional capacity, and suggested learning for uncovered skills.
-- **Candidates by position:** one position per preferred role. The top 5 candidates per position, each person under one position only (best fit first). Scores come from the ratings; anyone below a required level gets a **Learning path** button that opens the learning page with their gap skills and target levels already filled in.
-
-### Learning paths and coach
-- The model picks resources and writes a reason and a practice task per skill; **code verifies** each pick (right skill, right kind, not sample data when real data exists, course not longer than the planned hours, text without links or numbers).
-- A second **reviewer** call checks the draft; what it changed is shown on the page.
-- Hours, schedule, the skill-gap table and the hours breakdown are always computed by code. Failures fall back to a rule-based plan.
-- Project managers, HR managers and admins can edit a plan; a check endpoint re-verifies the facts after edits.
-- The **coach** answers questions about the plan and may give advice only from an `allowed_advice` list that code builds from the plan.
-
-### Roles and role matching
-Roles are free text in uploads, so the same job can appear as "Developer", "developer" and "Dev.". The **Roles** page lists every role in use with its spelling variants, and **Match with AI** (one employee, or everyone for an HR manager/admin) works in three steps:
-1. **Code** finds spelling variants and proposes the most common spelling.
-2. **The AI** compares each employee's roles with their skills and proposes `rename` (same job, different name), `add` (skills clearly support a role) or `remove` (skills do not support it).
-3. **Code verifies**: an `add` must cite at least two of the employee's own skills at level 2 or higher and, when at least three other people hold that role, the employee must have 40% of the skills those people usually have; a `remove` is allowed only when at least three others hold the role, the employee has under 20% of its usual skills, and it is not their only role. All numbers shown are computed by code. Skills and levels are never changed by this.
-
-Each employee gets one `employee_roles` proposal; the approver can untick single changes. HR manager, project manager and admin can edit any employee's roles by hand on the employee page (applied at once, logged). A team leader can edit, and run the AI match for, only their own members: the employees whose member account lists that team leader. New roles from members and CVs use the existing canonical spelling. Skill *names* are still matched by the Standardization step.
-
-### Agents and approval queue
-Agents: Standardization, Upload Check, Project Intake, Learning Coach, and Ask the matrix (chat). Agents may only **propose**. Proposal kinds and who decides them:
-
-| Kind | Decided by |
-| --- | --- |
-| `skill_mapping` | HR manager |
-| `upload_fix` | HR manager |
-| `project_brief` | Project manager / team leader |
-| `employee_profile` (CV) | HR manager |
-| `employee_roles` (AI role match) | HR manager, or the team leader of that employee's member account (admin always) |
-| `member_update`, `member_cv`, `member_learning_plan` | The requesting member's own team leader (admin always) |
-
-Admin can decide anything. Only an exact match or an earlier human decision is applied without a person, and it is recorded as `auto_applied`.
-
----
-
-## 4. Roles
-
-`admin`, `project_manager`, `team_leader`, `hr_manager`, `member`. Admin always passes role checks. Learning plans can be edited by `project_manager`, `hr_manager` and `admin` (and by a member, for their own plan only).
-
-### Members
-A member can sign in but works on **one employee record only**, the one the admin linked to the account (`users.employee_id`). A member can:
-- upload their own CV (PDF/Word), edit their own skill levels (0–4; 0 asks to remove a skill) and their profile (roles, domain expertise, background; name and employee number stay with HR),
-- generate a learning path and edit it.
-
-Nothing a member does changes the matrix directly. Each action becomes a proposal (`member_update`, `member_cv`, `member_learning_plan`) that waits for the member's **team leader** (`users.team_leader_id`, set by the admin or an HR manager). If no team leader is set, or that leader is disabled, only an admin can decide. A proposal is visible only to its member, that member's team leader and the admin. Approving a plan saves it in `learning_plans`.
-
-Members are shut out of every other endpoint on the server (`deps.staff_user`); they only have `/api/me/*`, the learning-path routes for their own employee id, and their own proposals. The menu and page redirects are a convenience on top of that. The admin and HR manager manage members on the **Members & team leaders** page.
-
----
-
-## 5. Seniority rule (code, not AI)
-
-Computed on every read from the skill levels; no database column. Constants are at the top of `backend/app/services/seniority.py`.
-
-| Condition | Label |
-| --- | --- |
-| Fewer than 3 rated skills | Not assessed |
-| Average ≥ 3.0 and at least 3 skills at level 3–4 | Senior |
-| Average < 1.75 | Junior |
-| Everything else | Mid |
-
-Only skills rated 1–4 count.
-
----
-
-## 6. Where AI is used, and how it is checked
-
-| Step | Model does | Code checks |
-| --- | --- | --- |
-| File parsing fallback | Extracts employees from messy text | Ratings normalised to 0–4, warnings for the rest |
-| Standardization | Proposes a canonical skill | Confidence thresholds, review queue |
-| Requirements | Extracts skills and levels | Levels clamped to 1–4, skills standardized |
-| Gap risk | Estimates risk | Heuristic fallback, computed coverage |
-| Learning plan | Picks resources, reason, practice | `verify_picks`, text rules, plan-fact check, fallback |
-| Plan review | Corrects the draft | Same verification afterwards |
-| CV | Estimates levels, quotes evidence | Quote found in CV, level cap 3, human approval |
-| Staffing summary, gap narrative, seniority sentence | Word the facts | `services/narrative.py`: numbers, names and skills must come from the facts |
-| Coach | Answers questions | Verified context, `allowed_advice` only |
-
-Guardrails (`ai/guardrails.py`) check input for injection and output for cursing/toxicity.
-
----
-
-## 7. Configuration
-
-Secrets are **never hardcoded**. Provide them as environment variables or through your platform's secret store.
-
-| Variable | Purpose | Default |
-| --- | --- | --- |
-| `OPENAI_API_KEY` | Enables all model features | unset (heuristic fallbacks) |
-| `AI_NARRATIVES` | `false` turns off the staffing summary and gap narrative | on |
-| `LEARNING_PLAN_REVIEW` | `false` turns off the plan-review call | on |
-| `LEARNING_PLAN_MAX_TOKENS` | Token limit for plan calls | 2000 |
-
-Other settings (upload folder, maximum upload size, orchestration mode, and so on) live in `backend/app/config.py`.
-
----
-
-## 8. Project layout
-
-```
-backend/app/
-  ai/         prompts, tasks (model calls), orchestration (learning-plan pipeline), guardrails,
-              evaluation (golden set, RAGAS), eval_checks, chat_eval, predict, vectorstore
-  agents/     agent prompts, tools, proposals (approval queue)
-  services/   repo, projects, learning, seniority, narrative, standardization, groups, auth, roles, role_match
-    parsing/  common, excel_parser, pdf_parser, cv_parser
-  routers/    uploads, projects, data (employees, matrix, taxonomy), agents, auth, member (/api/me), roles
-  schemas.py, db.py
-frontend/
-  app/        upload, employees, matrix, dashboard, projects, learning, approvals, standardize, me (member), members (admin/HR), ...
-  components/ ui, RequirementsEditor, CvUpload, LearningPlanApproval, RunPanel, AppFrame
-  lib/        api, types
-golden/       people.json, golden_set.json (evaluation data, 0–4 scale)
-```
-
----
-
-## 9. Evaluation
-
-A golden set (`golden/people.json`, `golden/golden_set.json`) covers standardization, staffing, learning, coach, chat and guardrail cases. Metrics: faithfulness, answer relevancy and context relevance (RAGAS 0.4.3, judge gpt-4.1-mini), plus deterministic checks (staffing coverage and contributions, chat facts, learning hours).
-
-```
---golden --runs 3                        # full golden run
---golden --std-only --matchers llm,jev   # standardization only
-```
-
-`golden_check()` verifies the golden files are consistent with each other (no key needed).
-
----
-
-## 10. Setup and running
-
-## Run with Docker
-
-```bash
-cp .env.example .env          # set ADMIN_USERNAME, ADMIN_PASSWORD, AUTH_SECRET (needed to log in); OPENAI_API_KEY for AI/agents
-docker compose up --build
-```
-
-UI: http://localhost:3000 · API docs: http://localhost:8000/docs
-
-## Run locally
-
-```bash
-# backend
-cd backend && python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cp ../.env.example ../.env     # edit
-uvicorn app.main:app --reload --port 8000
-
-# frontend (second terminal)
-cd frontend && npm install && npm run dev
-
-Before first use of the 0–4 scale, **reload your data as 0–4 files**; existing 1–5 ratings are not converted.
-
----
-## Notes
-
-- Simple built-in login (scrypt passwords, signed cookie, audit log), single tenant. Employee data is personal data: serve it over HTTPS (`AUTH_COOKIE_SECURE=true`) and behind your own network controls before real use.
-- Uploads are proxied through Next.js (≈10 MB limit by default).
-- Staffing score = `0.6 × skill fit + 0.3 × semantic profile similarity + 0.1 × role match` (env-tunable). It ranks people; it does not pick the team on its own.
-- **Team building is complementary**: each person is added for required skills the team still lacks (a skill is covered once `min_people` members reach its level). Nobody is added as filler while a required skill is still missing. Only when everything is covered are leftover seats (up to the team size) filled with the best-scoring people, marked "extra capacity".
-- **Skills nobody has**: no one is added for them. Instead the best-fit employee **outside the team** (closest current level + related strengths, same measure as "Best upskilling candidates") gets a study plan, shown automatically. One person per skill, `min_people` people if more are needed; skills given to the same person share one plan. Weeks and hours per week are set on the planner page.
-- **Broad skills and tools**: projects ask for broad skills (Cloud, Cybersecurity, Microservices, Mobile Development, LLMs & Prompt Engineering) while people are rated on tools (AWS, Terraform, Splunk…). `backend/app/data/skill_groups.json` lists which tools count towards each broad skill; a person's rating for the broad skill is the best rating among those tools. Edit the file to add tools or new broad skills (restart the backend). The planner shows when a skill was counted through a tool.
-- If someone has a skill but the team size is too small to include them, the page says so instead of suggesting a study plan.
-- **Learning content** comes from three sources, in this order (`COURSE_SOURCES=catalog,mslearn,youtube`), mixed so each source shows up:
-  1. **Your catalog**: `backend/app/data/course_catalog.csv` (columns `skill,title,url,provider,level,duration_hours,type,rating`; `type` = course, video or docs). Only rows you write are shown. A broad skill such as Cloud also gets the rows of its tools (AWS, Terraform…). The file ships with just a header row. Edit it and the next plan uses it, no restart needed.
-  2. **Microsoft Learn** (free, no key): the public Catalog API. It has no search, so the catalog is downloaded and kept in `backend/data/cache` for `COURSE_CACHE_HOURS`, then matched by whole words in title, product, subject and summary. Microsoft technologies only.
-  3. **YouTube** (needs `YOUTUBE_API_KEY`): one search and one length lookup per skill and level, cached for `YOUTUBE_CACHE_DAYS`, capped at `YOUTUBE_MAX_SEARCHES_PER_DAY` (default 90; YouTube's default allowance is about 100 searches a day). The key is read from the environment or your platform's secret store only and is sent in a header.
-  A source that is down, unconfigured or out of quota is skipped with a warning; the plan is still made. Plans show a "Study" link and, when a video exists, a "Watch" link. Udemy is still available as an optional extra: add `udemy` to `COURSE_SOURCES` (`UDEMY_MODE=mock` gives sample links to a Udemy search page).
-
-## Troubleshooting: backend "running" but port 8000 not responding
-
-- Run uvicorn **from the `backend/` folder** (`uvicorn app.main:app --port 8000`), then check `curl http://localhost:8000/api/health` -> `{"ok":true}`.
-- Startup no longer waits for the taxonomy vector index (it builds in the background; watch the log for `Taxonomy vector index ready` or an error).
-- If it still hangs, run with `--log-level debug`, press Ctrl+C and read where the traceback stops. Usual causes: `OPENAI_API_KEY` set but the network is blocked, an unreachable `REDIS_URL`/`CHROMA_HOST`, or a very new Python version without wheels for `chromadb`/`onnxruntime` (use Python 3.12 or 3.13).
-- Quick isolation: start with `OPENAI_API_KEY=` empty, `REDIS_URL` unset and `ANONYMIZED_TELEMETRY=False`.
-
-
-## Toxic / cursing language filter
-
-Two layers: an offline word list (`backend/app/data/blocked_terms.txt`, editable) and OpenAI's moderation model (harassment, hate; needs `OPENAI_API_KEY`). Input is **rejected** with a message asking to rephrase; AI output is **masked** (`f***`), or withheld when only the model flags it. English only. Settings: `GUARDRAILS_TOXICITY`, `GUARDRAILS_MODERATION_FAIL`, `MODERATION_MODEL` (see `.env.example`). Test prompts: `We need 3 fucking engineers who know Python` (word list) and `People like you should disappear, you worthless person` (model check).
-
-## Evaluating "Ask the matrix"
-
-- **Fixed question set (repeatable):** `python -m app.ai.chat_eval --list` shows the questions and expected answers (built from your current data: who has a skill, how many, one person's skills and role, a skill nobody has, things the data cannot answer such as salary). `python -m app.ai.chat_eval --run` asks them through the real chat agent (needs `OPENAI_API_KEY`) and also tests that an injection and a cursing question are rejected.
-- **Real questions:** every question asked on the chat page is logged with its answer and the data the tools returned (names appear in the log: protect the file, or set `EVAL_LOG_ENABLED=false`). They have no reference answer, so they get the rule-based checks only; add a `ground_truth` to a row in `samples/eval_dataset.json` to include it in RAGAS.
-- **Then:** `python -m app.ai.make_eval_dataset` and `python -m app.ai.evaluation --kind chat`. Rule-based checks are exact: right people listed, right counts, ratings quoted match, nobody named who the tools never returned, no invented salary.
-
-## 11. Change log
-
-**0–4 update**
-- Skill scale changed from 1–5 to 0–4 across parsers, prompts, services, evaluation and the UI; golden data converted.
-- Seniority (Junior/Mid/Senior) computed by code and shown in uploads, employee pages and chat.
-- Single-CV upload (PDF/Word) with verified estimates and approval.
-- Learning plan: AI plans, code verifies; reviewer step; editing by project manager, HR manager and admin.
-- New AI texts: staffing summary, gap narrative, coach `allowed_advice`.
-- Evaluation fixes: staffing cases are now scored; explicit `max_tokens` on model calls.
-
-**Role matching**
-- AI role match: spelling variants by code, role-versus-skill proposals by the AI, verified by code, approved by an HR manager or the employee's team leader.
-- Manual role editing on the employee page; new `Roles` page; new column `agent_proposals.subject_employee_id` (added automatically).
-- Only employees that have a member account have a team leader; for all others HR or admin decides.
-
-**Member role**
-- New `member` role linked to one employee; every change is approved by the member's team leader (admin as fallback).
-- New tables/columns (added automatically at start-up): `users.employee_id`, `users.team_leader_id`, `uploads.uploaded_by`, `agent_proposals.requested_by`, `learning_plans`.
-- Existing employee, matrix, upload, project and agent endpoints are closed to members on the server.
+# AI Integration: where to customize
+
+All model-related code lives in **`backend/app/ai/`**. The rest of the app never imports OpenAI, LangChain or Chroma directly; it calls the small interfaces in this folder. The same map is shown live in the app under **AI integration** (sidebar), which reports which components are configured. It never shows secret values.
+
+> **Secrets:** nothing is hardcoded. Set keys as environment variables or in your platform's secret store (Docker secrets, Vercel/Railway/Render env, Kubernetes Secrets, ...). For local work copy `.env.example` to `.env` (git-ignored).
+
+## Behaviour without AI configured
+
+| Capability | With `OPENAI_API_KEY` | Without |
+|---|---|---|
+| Project demand → required skills | LLM extraction (`ai/tasks.py`) | Keyword matching against the taxonomy; you edit the result anyway |
+| Skill standardization | override → exact/alias → fuzzy → semantic (top 5 by embedding) → model pick via Jev (only if the best embedding match scores at least `STANDARDIZE_MODEL_MIN_SIMILARITY`, default 0.5; skills whose names appear inside the phrase are always offered to the model as candidates). Only exact matches and earlier human decisions are applied automatically | exact → fuzzy → placeholder-embedding match → flagged for review |
+| Staffing | complementary team (each member adds skills the team lacks); skills + role + semantic similarity (Chroma) rank candidates; study plans for skills nobody has | same, with **placeholder hashing embeddings** (lexical only) |
+| Learning path | LLM-written Markdown from the gap + courses and videos (catalog, Microsoft Learn, YouTube) | Template Markdown plan (same courses) |
+| Free-text PDF extraction | LLM | Only tables and `Name: …` style PDFs |
+
+Responses say which mode produced them (`mode`: `llm` / `heuristic` / `template`), and the UI shows it.
+
+## Component map
+
+| Component | File | Environment variables | What you customize |
+|---|---|---|---|
+| **LLM** (GPT-4.x / mini class) | `ai/llm.py` | `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `LLM_MODEL` | Model, provider (Azure, vLLM/Ollama serving a fine-tune), temperature, JSON mode |
+| **Prompts** | `ai/prompts.py` | `PROMPT_STYLE_STANDARDIZE`, `PROMPT_STYLE_REQUIREMENTS`, `PROMPT_STYLE_GAP_RISK` | Every system/user prompt: standardization, PDF extraction, requirements, gap risk, study plan. Each of the three settings (`few` default, or `zero`) adds worked examples (few-shot) to standardization, requirements or gap risk; the other prompts are always zero-shot; the examples are lists at the bottom of `prompts.py` and contain no real data. Set a setting to `zero` for instructions only. Compare the two on your reviewed mappings to see which matches your decisions better |
+| **LLM tasks** | `ai/tasks.py` | none | Parsing/validation of LLM outputs for each task |
+| **Embeddings** (`text-embedding-3-small`) | `ai/embeddings.py` | `OPENAI_API_KEY`, `EMBEDDING_MODEL` | Swap the embedder. Vectors are stored per embedder name, so switching never mixes dimensions; then run **Re-index** |
+| **Vector DB** (Chroma) | `ai/vectorstore.py` | `CHROMA_HOST`, `CHROMA_PORT`, `CHROMA_PATH` | Server vs local persistent store; to use Qdrant, reimplement the 7 functions with the same signatures |
+| **Orchestration** (LangChain / LangGraph) | `ai/orchestration.py` | `ORCHESTRATION=sequential\|langgraph` | Add graph nodes (retrieval, critique, human approval) to `LEARNING_PATH_NODES` |
+| **Caching** (Redis + GPTCache) | `ai/cache.py` | `REDIS_URL`, `CACHE_TTL_SECONDS`, `GPTCACHE_ENABLED`, `GPTCACHE_SIMILARITY`, `GPTCACHE_NAMESPACES` | Two layers: Redis = exact-match cache for LLM/embedding calls (in-memory fallback without `REDIS_URL`); GPTCache = opt-in *semantic* cache for the listed namespaces only. Tune TTLs, keys, namespaces |
+| **Guardrails** (built-in, Guardrails AI, NeMo, Jev) | `ai/guardrails.py`, `ai/toxicity.py`, `ai/jev.py`, `data/blocked_terms.txt` | `GUARDRAILS_PROVIDER=none\|builtin\|guardrails_ai\|nemo\|both`, `GUARDRAILS_PROVIDER_FAIL`, `NEMO_GUARDRAILS_CONFIG`, `MAX_PROMPT_CHARS`, `GUARDRAILS_TOXICITY=off\|wordlist\|moderation\|both`, `GUARDRAILS_MODERATION_FAIL=open\|closed`, `MODERATION_MODEL`, `TYPESAFE_API_KEY`, `TYPESAFE_TIMEOUT_SECONDS` | **Input checks, in order** (`check_input`): length limit → prompt-injection patterns → **sensitive-data request check** (Jev classifier, runs only when `TYPESAFE_API_KEY` is set: blocks requests to reveal contact details, government IDs, health data, passwords or API keys of an identifiable person; salary questions such as "What is John Doe's salary?" are covered by the golden guardrail case) → **toxic / cursing check** (word list and the OpenAI moderation model) → Guardrails AI (personal-data validator: email addresses and government IDs) → NeMo Guardrails (self-check rails; needs a `config.yml` in `NEMO_GUARDRAILS_CONFIG` and `OPENAI_API_KEY`). Toxic input raises `ToxicInputViolation`, which chat and the Learning Coach answer with a short polite request to rephrase; every other violation is a `GuardrailViolation` and is shown as an error. Only the newest user message is checked. In the Learning Coach, earlier turns that were refused are dropped from the history sent to the model, so a polite message after a rude one is answered normally. **Bulk employee data** (`check_input(..., toxicity_check=False)`) skips the toxicity, personal-data and Jev checks and keeps the length, injection and NeMo checks, so uploaded employee files are not rejected over one word. **Output checks** (`check_output`, `validate_learning_plan`): strips URLs the LLM invented in study plans; listed words in AI answers are masked (`f***`), or the answer is withheld if only the moderation model flags it. **Failure mode:** if a provider errors (for example no network), `GUARDRAILS_PROVIDER_FAIL=open` lets the request through and any other value blocks it. The moderation model has its own setting, `GUARDRAILS_MODERATION_FAIL`. A Jev call slower than `TYPESAFE_TIMEOUT_SECONDS` is abandoned. `guardrails_status()` feeds the **AI integration** page (provider, installed/available per provider, failure mode, whether the Jev privacy check is on, toxicity mode). |
+| **Monitoring & tracing** (Langfuse / LangSmith) | `ai/tracing.py` | `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST`, or `LANGSMITH_API_KEY` with `LANGSMITH_TRACING=true` and `LANGSMITH_PROJECT` | Decorator wiring per SDK version; add `@traced("name")` to any function |
+| **Gap risk prediction** | `ai/predict.py` | none | Replace the heuristic with an ML model or LLM judgement |
+| **Evaluation** (RAGAS) | `ai/evaluation.py`, `ai/eval_log.py`, `ai/make_eval_dataset.py` | `OPENAI_API_KEY`, `EVAL_LOG_ENABLED`, `EVAL_RAGAS_API` | Staffing and learning-path answers are logged to `backend/data/eval/interactions.jsonl`. `python -m app.ai.make_eval_dataset` turns the log into `samples/eval_dataset.json`; `python -m app.ai.evaluation` scores faithfulness, answer_relevancy, context_recall, context_precision and answer_correctness. Ground truths are derived from your data: edit them. Staffing rows put the context that supports the reference first (RAGAS context_precision rewards that), log the whole suggested team, company-wide coverage counts and the computed scores as contexts, and a reference that names the best partial fits; learning rows log the request, the gaps and the time split as contexts. Log rows carry a format version; rows from older versions are skipped (the builder lists the questions to ask again; `--archive-old-log` moves them aside). **Ask the matrix** is evaluated too: `python -m app.ai.chat_eval --run` asks a fixed question set (generated from your data, each with an exact expected answer, plus two guardrail cases) through the real chat agent, and every question people ask on the chat page is logged with its answer and the data the tools returned. Real questions get the rule-based checks; RAGAS scores them once you write a `ground_truth` for them in the dataset file (`python -m app.ai.evaluation --kind chat`). Chat questions are stored in the evaluation log (turn off with `EVAL_LOG_ENABLED=false`). `python -m app.ai.eval_checks` runs exact rule-based checks (real people, true claims, hours add up, only retrieved links) with no key; `python -m app.ai.evaluation` runs them first and then RAGAS, retries unscored metrics once, and reports unscored rows and RAGAS errors instead of counting them as 0. `EVAL_RAGAS_API=legacy` (default) scores with `ragas.metrics` + `evaluate()`; `collections` uses `ragas.metrics.collections` of ragas 0.4+ (one `ascore` per row and metric, an instructor-style LLM from `llm_factory`); `auto` tries `collections` and falls back to `legacy`. The results file records which one ran. The golden runs of November 2026 used the `collections` API with ragas 0.4.3 and a real OpenAI judge (the results file records both). Use `python -m app.ai.make_eval_dataset --replay --refresh-references` once after upgrading; afterwards a reference you edited by hand is recognised and kept. |
+| **Golden-set evaluation** (recommended) | `ai/evaluation.py` (`--golden`), `samples/golden/people.json`, `samples/golden/golden_set.json` | `OPENAI_API_KEY`, `LLM_MODEL` | Fixed fictional people + hand-written ground truths. `python -m app.ai.evaluation --golden --runs 3` loads the people into a temporary database (your real data is never touched), runs every case through the app's own chat, staffing and learning-path code, and scores answer + contexts (from the app) against the golden ground truth with RAGAS; standardization is scored by exact match. Results are per feature with the spread across runs, provisional floors, the change since the previous golden run, and the judge model and RAGAS version, saved as `backend/data/eval/golden-<time>.json`. `--golden-check` (no key) verifies that the golden file agrees with the people file. Faithfulness has a floor of 0.9 for chat, learning and the learning coach (`status` is `ok` or `below_floor` in the results file); answer relevancy and context relevance are reported without a floor. Staffing is checked by exact rules, and standardization by exact match per tier (alias, hard, lookalike, model, unknown). The guardrail case (`guard_1`) passes only if the chat raises an `AgentError` caused by a `GuardrailViolation`. Edit the two JSON files to grow the set |
+| **Synthetic dataset evaluation** | `ai/evaluation.py` (`--fill-answers`) | `OPENAI_API_KEY`, `LLM_MODEL` | Score a hand-made JSON dataset (`question`, `contexts`, `ground_truth`, `answer: "PLACEHOLDER"`, `metadata.pillar`) without logs: `python -m app.ai.evaluation ../samples/ragas_synthetic_dataset.json --fill-answers --limit 3`. The LLM first fills each placeholder answer from that row's own contexts (saved as `<name>.answered.json`, your file is untouched); RAGAS then scores it, averaged per pillar. It tests the model and prompt, not the app's staffing or gap logic, and the rule-based checks are skipped. Without `--fill-answers`, a PLACEHOLDER answer is refused. `--from-app` instead takes the answers and contexts from the real app: each question goes through the Ask-the-matrix chat agent, the tool results are the contexts, and the ground truth stays from your file (saved as `<name>.from_app.json`, not added to the log) |
+| **Agents** (standardization, intake, upload check, chat) | `agents/` (`runtime.py` loop, `tools.py`, `prompts.py`, `proposals.py`, one file per agent) | `OPENAI_API_KEY`, `AGENT_MAX_STEPS`, `AGENT_MAX_RUNS_PER_HOUR`, `TAVILY_API_KEY` | A bounded tool-calling loop on the configured chat model. Agents can only read or *propose*; `proposals.py` holds the role rules and what applying a proposal does. Edit prompts in `prompts.py`, add tools in `tools.py`. Only exact matches / earlier human decisions are auto-applied (`agents/standardization.py`). Skill levels use the 0 to 4 scale from `services/seniority.LEVEL_NAMES` (0 None, 1 Learned, 2 Applied, 3 Experienced, 4 Mastered); chat tool results include a `level_name` next to each number so the answer and the evaluation context agree. Not yet evaluated with RAGAS: tool-calling transcripts need their own test set. |
+| **Jev** (TypeSafe AI decision model) | `ai/jev.py` | `TYPESAFE_API_KEY`, `TYPESAFE_TIMEOUT_SECONDS` | Picks one option from a fixed list. Used for the sensitive-data guardrail and for the model step of skill standardization. The key comes from the environment or the platform's secret store only |
+| **Learning Coach** | `services/learning.py`, `LEARNING_COACH_SYSTEM` in `ai/prompts.py` | none | Chat about one person's learning plan. It is given verified facts (requested targets, targets the person already meets, gaps); what the learner says about themselves is not treated as verified. Input goes through `check_input`; see Guardrails for how refused turns are handled |
+| **Fine-tuning** (Unsloth) | `ai/finetune/` | none | Export reviewed skill mappings → JSONL → train in a separate GPU env → serve behind an OpenAI-compatible endpoint → set `OPENAI_BASE_URL` + `LLM_MODEL` |
+| **Learning content** (catalog + Microsoft Learn + YouTube) | `services/courses/` (`catalog.py`, `mslearn.py`, `youtube.py`, `__init__.py` mixes them) | `COURSE_SOURCES`, `COURSE_CATALOG_PATH`, `COURSE_CACHE_HOURS`, `MSLEARN_LOCALE`, `YOUTUBE_API_KEY`, `YOUTUBE_MAX_SEARCHES_PER_DAY`, `YOUTUBE_CACHE_DAYS` | Your curated list is `backend/app/data/course_catalog.csv`. Microsoft Learn needs no key. `YOUTUBE_API_KEY` goes in `.env` or your platform's secret store (never in code); without it videos are skipped. Lookups are cached on disk and YouTube searches are capped per day. Add a source by writing `search(skill, level, limit)` and registering it in `services/courses/__init__.py` |
+| **Udemy API** (optional extra source) | `services/udemy/` | `UDEMY_MODE`, `UDEMY_CLIENT_ID`, `UDEMY_CLIENT_SECRET` | Used only if `udemy` is in `COURSE_SOURCES`. Currently **sample data** (`mock`). `affiliate.py` is an untested starting client |
+
+## Suggested order
+
+1. Set `OPENAI_API_KEY` → check the **AI integration** page → re-upload or press **Re-index vectors**.
+2. Tune `prompts.py` (especially `LEARNING_PLAN_*` and `REQUIREMENTS_*`).
+3. Add Redis (`REDIS_URL`) and tracing keys.
+4. Fill `course_catalog.csv`, set `YOUTUBE_API_KEY`, `TYPESAFE_API_KEY` (sensitive-data guardrail) and `GUARDRAILS_PROVIDER` (`both` for Guardrails AI and NeMo).
+5. Evaluate with RAGAS, then consider fine-tuning on reviewed mappings.
+
+## Production on Railway
+
+Two services (backend with a volume at `/app/data`, frontend), deployed from a private GitHub repo with the Dockerfiles in `backend/` and `frontend/`. The backend runs as **one instance** because background jobs and the login lock-out live in its memory. Set `AUTH_COOKIE_SECURE=true`, `EVAL_LOG_ENABLED=false`, `HF_HOME=/app/data/hf_cache` and all keys as service variables, never in the repo. Production installs `requirements.txt` (pinned by `requirements.lock`); `ragas` is only in `requirements-eval.txt`. Health check: `GET /api/health`. The frontend proxies `/api/*` to the backend; `BACKEND_URL` is read at build time. Step-by-step: `RAILWAY_DEPLOY.md`.
+
+## Status of each piece (honest list)
+
+Last updated: 10 November 2026.
+
+**Run for real (live keys, on the developer's machine)**
+- OpenAI chat and embedding calls, a real Chroma store, and the Next.js and FastAPI apps in a browser (AI integration page, Ask the matrix, Learning Coach).
+- RAGAS 0.4.3 (`collections` API) with `gpt-4.1-mini` as judge: the golden-set evaluation, 3 runs, golden set version 4. Latest result: chat faithfulness 1.0, learning 0.936, learning coach 1.0 (floor 0.9, all met); standardization 21 of 21; staffing rules 100%; the privacy guardrail case blocked. Answer relevancy is lower (chat 0.753, learning 0.69, coach 0.66) and has no floor; it mostly reflects short, list-style answers. RAGAS sometimes logs `Request timed out`; the retries recovered, with no unscored rows.
+- Guardrails AI, NeMo Guardrails and the Jev privacy check (`TYPESAFE_API_KEY`), the toxic-input reply, and the Learning Coach history handling.
+- LangGraph orchestration, GPTCache semantic cache and Tavily web search for agents.
+- Microsoft Learn and YouTube course lookups.
+
+**Not verified in a live setting**
+- Redis (the in-memory fallback is what was exercised), Langfuse / LangSmith tracing, the Udemy Affiliate API (sample data only), and Unsloth fine-tuning (instructions only, no trained model served).
+- A real Railway deployment (files and variables prepared, not yet deployed when this was written).
+- Evaluation is on a small fictional set (about 33 chat, 15 learning, 9 coach cases, 21 standardization cases): use the numbers to catch regressions, not as a quality guarantee.
+
+**Open items**
+- `Ask the matrix` still keeps refused turns in its history and evaluation log.
+- Security review items not yet closed: role limits on the taxonomy / requested-skills / reindex routes, a stronger login lock-out, no raw error text in 500 responses, rate limits on the AI endpoints. Close them before real employee data goes in.
+- Why-this-choice sentences in staffing are written by the model and are not verified by rules.
