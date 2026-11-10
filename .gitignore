@@ -145,3 +145,7 @@ railway.env.backend.ready
 railway.env.backend.ready
 
 railway.env.backend.ready
+
+*.tsbuildinfo
+**/.DS_Store
+*.bak3
