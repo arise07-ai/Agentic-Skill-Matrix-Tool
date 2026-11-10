@@ -69,7 +69,8 @@ def requested_skills(status: str = "pending"):
 
 
 @router.post("/skills/requested")
-def decide_requested(body: RequestedDecision, user: dict = Depends(current_user)):
+def decide_requested(body: RequestedDecision, user: dict = Depends(require_roles("hr_manager"))):
+    """Approve or dismiss a skill that projects asked for. HR manager and admin only."""
     auth.audit(user, "requested_skill_" + body.action, {"name": body.name, "canonical": body.canonical})
     try:
         out = requested.decide(body.name, body.action, body.canonical, body.category)
@@ -88,8 +89,9 @@ def taxonomy():
     return [{"name": n, **m} for n, m in sorted(tax.items(), key=lambda kv: (kv[1]["category"], kv[0]))]
 
 
-@router.post("/taxonomy")
+@router.post("/taxonomy", dependencies=[Depends(require_roles("hr_manager"))])
 def add_taxonomy(item: TaxonomyItem):
+    """Add or change a taxonomy skill. HR manager and admin only (everyone on the staff side can read it)."""
     import json
 
     seeded = json.loads(standardization.SEED.read_text(encoding="utf-8")).get(item.name)
@@ -114,8 +116,9 @@ def ai_status():
     return component_status()
 
 
-@router.post("/admin/reindex")
+@router.post("/admin/reindex", dependencies=[Depends(require_roles())])
 def reindex():
+    """Rebuild the vector index (slow; calls the embeddings API). Admin only."""
     standardization.ensure_taxonomy_indexed(force=True)
     return {"employees_indexed": repo.reindex_employees()}
 

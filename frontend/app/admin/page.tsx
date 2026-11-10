@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { localTime, post, useApi } from "@/lib/api";
-import type { AuditRow, OpenSession, Role, User } from "@/lib/types";
+import type { AuditRow, LockedAccount, OpenSession, Role, User } from "@/lib/types";
 import { Alert, Loading, Pill } from "@/components/ui";
 import { useUser } from "@/components/AppFrame";
 
@@ -12,6 +12,7 @@ export default function AdminPage() {
   const users = useApi<User[]>(user?.role === "admin" ? "/api/auth/users" : null);
   const audit = useApi<AuditRow[]>(user?.role === "admin" ? "/api/auth/audit?limit=200" : null);
   const sessions = useApi<OpenSession[]>(user?.role === "admin" ? "/api/auth/sessions" : null);
+  const locked = useApi<LockedAccount[]>(user?.role === "admin" ? "/api/auth/lockouts" : null);
   const [f, setF] = useState({ username: "", password: "", role: "project_manager" as Role, display_name: "" });
   const [msg, setMsg] = useState<{ tone: "ok" | "bad"; text: string } | null>(null);
 
@@ -32,6 +33,12 @@ export default function AdminPage() {
     try {
       await post(`/api/auth/sessions/${encodeURIComponent(s.id)}/end`, {});
       setMsg({ tone: "ok", text: `${s.display_name} was signed out.` }); sessions.reload(); audit.reload();
+    } catch (e) { setMsg({ tone: "bad", text: (e as Error).message }); }
+  }
+  async function unlock(l: LockedAccount) {
+    try {
+      await post("/api/auth/lockouts/unlock", { username: l.username });
+      setMsg({ tone: "ok", text: `${l.username} can sign in again.` }); locked.reload(); audit.reload();
     } catch (e) { setMsg({ tone: "bad", text: (e as Error).message }); }
   }
   function resetPassword(u: User) {
@@ -77,6 +84,26 @@ export default function AdminPage() {
           </tbody>
         </table></div>
       </div>
+
+      {!!locked.data?.length && (
+        <div className="card">
+          <h2>Locked sign-ins</h2>
+          <p className="muted">After 5 wrong passwords within 15 minutes a username is locked for 15 minutes. Unlock it if you know the person.</p>
+          <div className="tablewrap"><table>
+            <thead><tr><th>Username</th><th>Account</th><th>Locked until</th><th /></tr></thead>
+            <tbody>
+              {locked.data.map((l) => (
+                <tr key={l.username}>
+                  <td>{l.username}</td>
+                  <td>{l.user_id ? l.display_name : <Pill tone="warn">No such account</Pill>}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>{localTime(l.locked_until)}</td>
+                  <td><button className="btn ghost sm" onClick={() => unlock(l)}>Unlock</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table></div>
+        </div>
+      )}
 
       <div className="card">
         <h2>Active sessions</h2>

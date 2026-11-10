@@ -6,7 +6,8 @@ import type { AgentRun, AgentsStatus } from "@/lib/types";
 import { Markdown } from "@/components/ui";
 import AgentPortrait from "@/components/AgentPortrait";
 
-type Msg = { role: "user" | "assistant"; content: string };
+// refused: shown on screen, but never sent again (a question the guardrails refused, its polite reply, or one that got no answer)
+type Msg = { role: "user" | "assistant"; content: string; refused?: boolean };
 
 export default function ChatWidget() {
   const status = useApi<AgentsStatus>("/api/agents/status");
@@ -25,27 +26,34 @@ export default function ChatWidget() {
     const question = text.trim();
     if (!question || busy) return;
     const history: Msg[] = [...msgs, { role: "user", content: question }];
+    const unanswered = () => setMsgs([...history.slice(0, -1), { role: "user", content: question, refused: true }]);
     setMsgs(history);
     setText("");
     setBusy(true);
     setError(null);
     setLive("I’m putting together an answer…");
     try {
-      const { run_id } = await post<{ run_id: string }>("/api/agents/runs", { agent: "chat", messages: history });
+      const sent = history.filter((m) => !m.refused).map(({ role, content }) => ({ role, content }));
+      const { run_id } = await post<{ run_id: string }>("/api/agents/runs", { agent: "chat", messages: sent });
       for (let attempt = 0; attempt < 120; attempt += 1) {
         await new Promise((resolve) => setTimeout(resolve, 900));
         const run = await api<AgentRun>(`/api/agents/runs/${run_id}`);
         if (run.status === "done") {
-          setMsgs([...history, { role: "assistant", content: run.result?.answer ?? "No answer was returned." }]);
+          const refused = !!run.result?.refused; // e.g. rude language: answered politely, then left out of later questions
+          setMsgs([...history.slice(0, -1), { role: "user", content: question, refused },
+                   { role: "assistant", content: run.result?.answer ?? "No answer was returned.", refused }]);
           return;
         }
         if (run.status === "error") {
+          unanswered();
           setError(run.error ?? "The assistant stopped unexpectedly.");
           return;
         }
       }
+      unanswered();
       setError("This is taking longer than expected. Please try again.");
     } catch (e) {
+      unanswered();
       setError((e as Error).message);
     } finally {
       setBusy(false);

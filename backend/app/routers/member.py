@@ -110,7 +110,7 @@ def propose_changes(body: MemberChange, user: dict = Depends(member_user)):
 
 
 @router.post("/cv")
-async def upload_cv(file: UploadFile = File(...), user: dict = Depends(member_user)):
+async def upload_cv(file: UploadFile = File(...), user: dict = Depends(member_user)):  # counted in uploads.cv_preview
     """Read the member's own CV. Same checks as the staff upload (quotes verified, seniority by rule); nothing is saved."""
     out = await uploads.cv_preview(file, user)
     out["existing_employee"] = None  # a member always works on their own record

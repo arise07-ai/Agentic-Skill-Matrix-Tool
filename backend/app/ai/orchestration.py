@@ -5,8 +5,8 @@ ORCHESTRATION=langgraph runs it through a LangGraph StateGraph; the default runs
 node functions sequentially (no behavioural difference). Add nodes (retrieval, critique,
 RAGAS-style self-check, human approval...) by appending to LEARNING_PATH_NODES.
 
-The model only CHOOSES (a study course and a video from the retrieved candidates) and writes one short reason and one practice task per
-skill. It never writes the plan: services/learning.py verifies every choice and builds the plan from data.
+The model only CHOOSES (a study course and a video from the retrieved candidates) and writes one practice task per skill. The
+"Why this choice" line is written by code from the chosen course's own facts (services/learning.why_choice). It never writes the plan: services/learning.py verifies every choice and builds the plan from data.
 
 Each node takes the state dict and returns a dict of updates.
 """
@@ -27,11 +27,11 @@ PLAN_MAX_TOKENS = int(os.environ.get("LEARNING_PLAN_MAX_TOKENS", "2000"))
 REVIEW_ON = os.environ.get("LEARNING_PLAN_REVIEW", "true").strip().lower() not in ("0", "false", "no", "off")  # the second, reviewing model call
 
 PLAN_PICK_SYSTEM = """You are the planning step of a learning & development tool. For EACH skill in the data, choose learning resources from that
-skill's own candidates and write two short pieces of text. You do not write the plan: the app computes every number and builds the plan.
+skill's own candidates and write one short practice task. You do not write the plan: the app computes every number and builds the plan.
 
 Return ONLY JSON:
 {"skills": [{"skill": "<exact skill name from the data>", "study_id": "<candidate id or null>", "watch_id": "<candidate id or null>",
-             "why": "<one sentence>", "practice": "<one sentence>"}]}
+             "practice": "<one sentence>"}]}
 
 Rules:
 - One entry per skill, with the skill name copied exactly.
@@ -39,8 +39,6 @@ Rules:
   Use null when there is no suitable candidate. Never use an id from another skill and never invent an id.
 - Choose the study course that best fits: it must teach the skill, its duration_hours should not exceed planned_hours, its level should be close to
   target_level (1 beginner, 2 intermediate, 3-4 advanced), and prefer candidates with is_sample false.
-- why: one sentence (at most 25 words) saying why this course suits this person, using only the candidate's own fields (title, provider,
-  level, duration) and the person's role, background or known related skill.
 - practice: one sentence (at most 30 words) describing one small hands-on task that uses the skill, taken from the project/goal when one is
   given, otherwise from the person's role and background. Do not name tools, products or systems that are not in the data.
 - Do not mention hours, weeks, days, links, ratings or numbers. The schedule is computed elsewhere.
@@ -64,9 +62,8 @@ Rules to check (the same rules the planner had):
   Never an id of another skill, never an invented id.
 - The study course teaches the skill, its duration_hours does not exceed planned_hours when a shorter suitable one exists, its level is close to
   target_level (1 beginner, 2 intermediate, 3-4 advanced), and a candidate with is_sample false is preferred.
-- why: one sentence, at most 25 words, that uses only the candidate's own fields and the person's role, background or known related skill.
 - practice: one sentence, at most 30 words, a small hands-on task; no tools or systems that are not in the data.
-- No hours, weeks, days, links, ratings or numbers in why or practice.
+- No hours, weeks, days, links, ratings or numbers in practice.
 - If an entry is fine, return it unchanged. If everything is fine, return the draft unchanged and an empty review list.
 - review: one item per skill you changed. reason is read by the learner: one short plain-English clause, at most 20 words, that refers to
   courses by what they are (shorter, beginner level, about the skill), e.g. "it is shorter and closer to beginner level, so it fits the planned
@@ -143,7 +140,7 @@ def _guard_output(state: dict) -> dict:
     for row in picks.get("skills", []) if isinstance(picks, dict) else []:
         if not isinstance(row, dict):
             continue
-        for field in ("why", "practice"):
+        for field in ("practice",):
             if row.get(field):
                 row[field], n = check_output(str(row[field]))
                 notes += n

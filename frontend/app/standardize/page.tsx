@@ -3,6 +3,7 @@ import { useState } from "react";
 import { post, useApi } from "@/lib/api";
 import type { MappingRow, RequestedSkill, TaxonomyEntry } from "@/lib/types";
 import { Alert, Empty, Loading, Pill } from "@/components/ui";
+import { useUser } from "@/components/AppFrame";
 
 function Row({ m, taxonomy, categories, onSaved }: { m: MappingRow; taxonomy: TaxonomyEntry[]; categories: string[]; onSaved: () => void }) {
   const [value, setValue] = useState(m.canonical_skill);
@@ -38,7 +39,7 @@ function Row({ m, taxonomy, categories, onSaved }: { m: MappingRow; taxonomy: Ta
   );
 }
 
-function RequestedRow({ r, taxonomy, categories, onDone }: { r: RequestedSkill; taxonomy: TaxonomyEntry[]; categories: string[]; onDone: () => void }) {
+function RequestedRow({ r, taxonomy, categories, onDone, canDecide }: { r: RequestedSkill; taxonomy: TaxonomyEntry[]; categories: string[]; onDone: () => void; canDecide: boolean }) {
   const [canonical, setCanonical] = useState(r.name);
   const [category, setCategory] = useState("");
   const [busy, setBusy] = useState(false);
@@ -75,14 +76,18 @@ function RequestedRow({ r, taxonomy, categories, onDone }: { r: RequestedSkill; 
         {err && <div className="muted" style={{ color: "var(--bad)" }}>{err}</div>}
       </td>
       <td style={{ whiteSpace: "nowrap" }}>
-        <button className="btn sm" disabled={busy || !canonical.trim()} onClick={() => act("approve")}>{busy ? "Saving…" : "Approve"}</button>{" "}
-        <button className="btn ghost sm" disabled={busy} onClick={() => act("dismiss")}>Dismiss</button>
+        {canDecide ? (<>
+          <button className="btn sm" disabled={busy || !canonical.trim()} onClick={() => act("approve")}>{busy ? "Saving…" : "Approve"}</button>{" "}
+          <button className="btn ghost sm" disabled={busy} onClick={() => act("dismiss")}>Dismiss</button>
+        </>) : <span className="muted" style={{ fontSize: 12 }}>An HR manager or admin decides this.</span>}
       </td>
     </tr>
   );
 }
 
 export default function StandardizePage() {
+  const { user } = useUser();
+  const canDecideRequested = user?.role === "admin" || user?.role === "hr_manager"; // the server enforces this too
   const [tab, setTab] = useState<"needs_review" | "all" | "requested">("needs_review");
   const { data, error, loading, reload } = useApi<MappingRow[]>(tab === "requested" ? null : `/api/skills/mappings?status=${tab}`);
   const { data: requested, error: reqError, loading: reqLoading, reload: reloadReq } = useApi<RequestedSkill[]>("/api/skills/requested");
@@ -111,7 +116,7 @@ export default function StandardizePage() {
             <div className="card tablewrap">
               <table>
                 <thead><tr><th>Requested skill</th><th>Add to taxonomy as</th><th /></tr></thead>
-                <tbody>{requested.map((r) => <RequestedRow key={r.name} r={r} taxonomy={taxonomy ?? []} categories={categories} onDone={() => { reloadReq(); reloadTax(); }} />)}</tbody>
+                <tbody>{requested.map((r) => <RequestedRow key={r.name} r={r} taxonomy={taxonomy ?? []} categories={categories} canDecide={canDecideRequested} onDone={() => { reloadReq(); reloadTax(); }} />)}</tbody>
               </table>
             </div>
           )}

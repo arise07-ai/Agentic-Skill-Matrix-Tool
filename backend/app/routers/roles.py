@@ -8,7 +8,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from ..deps import require_roles, staff_user
+from ..deps import count_ai_request, require_roles, staff_user
 from ..services import auth, repo, role_match, roles
 
 router = APIRouter(prefix="/api/roles", tags=["roles"])
@@ -44,6 +44,7 @@ def match(body: MatchBody, user: dict = Depends(staff_user)):
         raise HTTPException(403, "Only an HR manager or admin can match many employees at once")
     if not many and not can_edit_roles(user, body.employee_ids[0]):
         raise HTTPException(403, "A team leader can only match the roles of their own members")
+    count_ai_request(user)
     auth.audit(user, "role_match_started", {"employees": body.employee_ids if body.employee_ids else "all"})
     return {"job_id": role_match.start(body.employee_ids)}
 

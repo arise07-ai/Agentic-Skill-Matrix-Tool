@@ -19,7 +19,7 @@ class ChatGuardrailsTests(unittest.TestCase):
         ):
             result = chat.run(ctx, inp)
 
-        self.assertEqual(result, {"answer": reply, "employee_ids": []})
+        self.assertEqual(result, {"answer": reply, "employee_ids": [], "refused": True})  # the page leaves refused turns out of the history
         model_loop.assert_not_called()
 
     def test_non_toxic_guardrail_violations_remain_errors(self) -> None:

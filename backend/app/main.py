@@ -1,5 +1,6 @@
 import logging
 import re
+import secrets
 import threading
 from contextlib import asynccontextmanager
 
@@ -64,13 +65,20 @@ app.add_middleware(
 )
 @app.exception_handler(Exception)
 async def unhandled(request: Request, exc: Exception):
-    """Local/dev aid: log the full traceback in the uvicorn terminal and return the real error text instead of a bare
-    'Internal Server Error', so the UI can show what went wrong. Only logged-in users reach most routes; key-like text
-    in the message is masked."""
-    log.exception("Unhandled error on %s %s", request.method, request.url.path)
-    text = re.sub(r"(Incorrect API key provided: )\S+", r"\1***", f"{type(exc).__name__}: {exc}")
-    text = re.sub(r"(sk|tvly|lsv2)[-_][A-Za-z0-9_\-]{6,}", r"\1-***", text)
-    return JSONResponse(status_code=500, content={"detail": text})
+    """Every unexpected error is logged in full under a short reference. People see a plain message with that reference (so it
+    can be found in the server log); only an admin also sees the error text, with key-like text masked."""
+    ref = secrets.token_hex(3).upper()
+    log.exception("Unhandled error [ref %s] on %s %s", ref, request.method, request.url.path)
+    message = f"Something went wrong on our side. Reference: {ref}"
+    try:  # the error may come from the database itself, so failing to identify the user just means "not an admin"
+        viewer, _ = auth.session_from_token(request.cookies.get(auth.COOKIE))
+    except Exception:  # noqa: BLE001
+        viewer = None
+    if viewer and viewer["role"] == "admin":
+        text = re.sub(r"(Incorrect API key provided: )\S+", r"\1***", f"{type(exc).__name__}: {exc}")
+        text = re.sub(r"(sk|tvly|lsv2)[-_][A-Za-z0-9_\-]{6,}", r"\1-***", text)
+        message += f" ({text})"
+    return JSONResponse(status_code=500, content={"detail": message})
 
 
 

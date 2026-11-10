@@ -64,6 +64,24 @@ def me(user: dict = Depends(current_user)):
     return {**user, "session": auth.session_info(sid)}
 
 
+class UnlockBody(BaseModel):
+    username: str
+
+
+@router.get("/lockouts")
+def lockouts(user: dict = Depends(require_roles())):
+    """Admin: usernames locked after too many wrong passwords."""
+    return auth.locked_accounts()
+
+
+@router.post("/lockouts/unlock")
+def unlock(body: UnlockBody, user: dict = Depends(require_roles())):
+    """Admin: let a locked username sign in again right away."""
+    if not auth.unlock(body.username, user):
+        raise HTTPException(404, "That username is not locked")
+    return {"ok": True}
+
+
 @router.get("/sessions")
 def sessions(user: dict = Depends(require_roles())):
     """Admin: every open session (one per user at most)."""

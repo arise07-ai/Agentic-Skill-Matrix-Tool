@@ -103,6 +103,7 @@ class Settings(BaseSettings):
     # ---- agents
     agent_max_steps: int = 14  # model/tool round trips per run
     agent_max_runs_per_hour: int = 30  # per user
+    ai_max_requests_per_hour: int = 60  # per user, shared by every AI endpoint (deps.count_ai_request, called after each route's quick checks); the admin is exempt; 0 = no limit
     agent_ask_timeout_seconds: int = 600  # how long a run waits for your answer to its question
     tavily_api_key: str = ""  # optional web lookup for unfamiliar skills
 

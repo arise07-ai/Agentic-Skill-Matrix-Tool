@@ -29,7 +29,11 @@ MIN_PASSWORD = 10
 COOKIE = "sm_session"
 
 _fallback_secret = secrets.token_hex(32)  # used only when AUTH_SECRET is not set
-_failures: dict[str, list[float]] = {}  # username -> recent failed login times (in memory)
+# Login lock-out (stored in login_lockouts, so a restart does not clear it): LOCK_AFTER wrong passwords within LOCK_WINDOW_MINUTES
+# lock the username for LOCK_MINUTES. An admin can unlock it earlier on Users & audit log.
+LOCK_AFTER = 5
+LOCK_WINDOW_MINUTES = 15
+LOCK_MINUTES = 15
 
 
 # ---------------------------------------------------------------- passwords
@@ -168,23 +172,67 @@ def public(u: dict) -> dict:
 
 # ---------------------------------------------------------------- login
 def login(username: str, password: str) -> dict:
-    """-> public user dict, or raises PermissionError. Slows down repeated failures for one username."""
+    """-> public user dict, or raises PermissionError. A username with too many recent failures is locked (see LOCK_AFTER)."""
     key = username.strip().lower()
-    now = time.time()
-    recent = [t for t in _failures.get(key, []) if now - t < 300]
-    if len(recent) >= 5:
-        raise PermissionError("Too many failed attempts. Wait a few minutes and try again.")
+    minutes = locked_minutes_left(key)
+    if minutes:  # refused before the password is even checked
+        raise PermissionError(f"Too many failed sign-ins. This account is locked for {minutes} more minute{'s' if minutes != 1 else ''}; "
+                              "try again later or ask an administrator to unlock it.")
     u = db.one("SELECT * FROM users WHERE username=?", (username.strip(),))
     ok = bool(u and u["active"] and verify_password(password, u["password_hash"]))
     if not u:
         verify_password(password, "scrypt$00$00")  # keep the timing similar for unknown names
     if not ok:
-        _failures[key] = recent + [now]
         audit(None, "login_failed", {"username": username.strip()[:60]})
+        if _record_failure(key):
+            audit(None, "account_locked", {"username": username.strip()[:60], "minutes": LOCK_MINUTES})
+            raise PermissionError(f"Too many failed sign-ins. This account is locked for {LOCK_MINUTES} minutes; "
+                                  "try again later or ask an administrator to unlock it.")
         raise PermissionError("Wrong username or password")
-    _failures.pop(key, None)
+    with db.connect() as c:
+        c.execute("DELETE FROM login_lockouts WHERE username_key=?", (key,))
     audit(public(u), "login", {})
     return public(u)
+
+
+def locked_minutes_left(username_key: str) -> int:
+    """0 when the username may try to sign in, else the whole minutes left of its lock (at least 1)."""
+    r = db.one("SELECT CAST((julianday(locked_until) - julianday('now')) * 1440 AS INTEGER) + 1 AS m FROM login_lockouts "
+               "WHERE username_key=? AND locked_until > datetime('now')", (username_key,))
+    return int(r["m"]) if r else 0
+
+
+def _record_failure(username_key: str) -> bool:
+    """Count one wrong password. -> True when this failure locked the username."""
+    window = f"-{LOCK_WINDOW_MINUTES} minutes"
+    with db.connect() as c:  # a failure older than the window starts a new count
+        c.execute("""INSERT INTO login_lockouts(username_key, failures) VALUES (?, 1)
+                     ON CONFLICT(username_key) DO UPDATE SET
+                       failures = CASE WHEN window_start < datetime('now', ?) THEN 1 ELSE failures + 1 END,
+                       window_start = CASE WHEN window_start < datetime('now', ?) THEN CURRENT_TIMESTAMP ELSE window_start END""",
+                  (username_key, window, window))
+        if c.execute("SELECT failures FROM login_lockouts WHERE username_key=?", (username_key,)).fetchone()["failures"] < LOCK_AFTER:
+            return False
+        c.execute("UPDATE login_lockouts SET locked_until=datetime('now', ?), failures=0, window_start=CURRENT_TIMESTAMP WHERE username_key=?",
+                  (f"+{LOCK_MINUTES} minutes", username_key))
+    return True
+
+
+def locked_accounts() -> list[dict]:
+    """Usernames locked right now, for the admin. A name that has no account is listed too (someone is guessing)."""
+    return db.rows("""SELECT l.username_key AS username, l.locked_until, u.id AS user_id,
+                             COALESCE(NULLIF(u.display_name, ''), u.username) AS display_name
+                      FROM login_lockouts l LEFT JOIN users u ON lower(u.username) = l.username_key
+                      WHERE l.locked_until > datetime('now') ORDER BY l.locked_until DESC""")
+
+
+def unlock(username: str, actor: dict) -> bool:
+    key = username.strip().lower()
+    with db.connect() as c:
+        n = c.execute("DELETE FROM login_lockouts WHERE username_key=?", (key,)).rowcount
+    if n:
+        audit(actor, "account_unlocked", {"username": key[:60]})
+    return bool(n)
 
 
 # ---------------------------------------------------------------- users

@@ -27,7 +27,7 @@ No separate Chroma or Redis service is needed. The vector index runs inside the 
    - **Variables** -> Raw Editor -> paste `railway.env.backend.example` and fill in the values.
      Make a signing secret with: `python -c "import secrets;print(secrets.token_urlsafe(48))"`
    - Settings -> **Healthcheck path**: `/api/health`.
-   - Settings -> make sure there is **one** replica (the app keeps jobs and login lock-out in memory).
+   - Settings -> make sure there is **one** replica (the app keeps background jobs, agent runs and the AI rate-limit counters in memory).
 3. **Frontend service**: add another service from the same repo.
    - **Service name**: `frontend`. **Root Directory**: `/frontend`.
    - **Variables** -> paste `railway.env.frontend.example`.
@@ -53,6 +53,8 @@ No separate Chroma or Redis service is needed. The vector index runs inside the 
 - Update in this order: test the change locally, deploy, check `/api/health`, then log in and look at Approvals.
 - The backend container runs as root so it can write to the volume. If you later switch it to a non-root user, set `RAILWAY_RUN_UID=0` on that service or the volume will not be writable.
 
-## Not done by these files (code changes still open from the security review)
-Role limits on the taxonomy / requested-skills / reindex routes, a stronger login lock-out, no raw error text in 500 responses, rate limits on the
-AI endpoints, and security headers on the website. Deploying with these open is fine for a trial with test data, but close them before real employee data goes in.
+## Security review items
+Closed in the code: role limits on the taxonomy / requested-skills / reindex routes, a stored login lock-out with admin unlock, no raw error
+text in 500 responses (except for the admin), a per-user AI rate limit (`AI_MAX_REQUESTS_PER_HOUR`, in `railway.env.backend.example`), and
+security headers on the website (`frontend/next.config.mjs`). See "Access limits and errors" and "Sign-in and sessions" in `README.md`.
+Still open: see "Open items" in `README.md`.

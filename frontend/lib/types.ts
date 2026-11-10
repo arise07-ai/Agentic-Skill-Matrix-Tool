@@ -97,6 +97,8 @@ export type User = {
 };
 /** Times are UTC "YYYY-MM-DD HH:MM:SS" from the server. device is a short label such as "Chrome on macOS". */
 export type SessionInfo = { device: string; created_at: string; last_seen_at: string; expires_at: string };
+/** A username locked after too many wrong passwords. user_id is null when no account has that name (someone is guessing). */
+export type LockedAccount = { username: string; locked_until: string; user_id: number | null; display_name: string | null };
 export type OpenSession = SessionInfo & { id: string; user_id: number; username: string; display_name: string; role: Role };
 export type MemberAccount = User & { employee_name: string | null; team_leader_name: string | null };
 export type TeamLeaderOption = { id: number; name: string; username: string };
@@ -111,7 +113,7 @@ export type AgentKey = "standardization" | "intake" | "upload" | "chat";
 export type AgentStep = { t: string; kind: "tool" | "info" | "question" | "answer"; text: string };
 export type AgentRun = {
   id: string; agent: AgentKey; status: "running" | "waiting_input" | "done" | "error"; question: string | null; error: string | null;
-  steps: AgentStep[] | null; result: { summary?: string; answer?: string; proposal_ids?: number[]; auto_applied?: number; employee_ids?: number[] } | null;
+  steps: AgentStep[] | null; result: { summary?: string; answer?: string; proposal_ids?: number[]; auto_applied?: number; employee_ids?: number[]; refused?: boolean } | null;
 };
 export type AgentsStatus = { available: boolean; message: string; web_lookup: boolean; agents: { key: AgentKey; title: string }[]; pending: { mine: number; all: number } };
 

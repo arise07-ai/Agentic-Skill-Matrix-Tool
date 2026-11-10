@@ -176,6 +176,14 @@ CREATE TABLE IF NOT EXISTS user_sessions (
   end_reason TEXT NOT NULL DEFAULT ''
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_one_open_session ON user_sessions(user_id) WHERE ended_at IS NULL;
+-- Failed sign-ins per username (lower case; also for names that do not exist, so the answer never reveals which do).
+-- LOCK_AFTER failures within LOCK_WINDOW_MINUTES lock the name for LOCK_MINUTES (services/auth.py). An admin can unlock it.
+CREATE TABLE IF NOT EXISTS login_lockouts (
+  username_key TEXT PRIMARY KEY,
+  failures INTEGER NOT NULL DEFAULT 0,
+  window_start TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  locked_until TEXT
+);
 """
 
 

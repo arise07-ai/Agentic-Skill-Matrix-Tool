@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
 from .. import db
 from ..config import get_settings
-from ..deps import current_user
+from ..deps import count_ai_request, current_user
 from types import SimpleNamespace
 
 from ..agents import proposals
@@ -53,7 +53,7 @@ def list_uploads():
 
 
 @router.post("")
-async def upload(file: UploadFile = File(...)):
+async def upload(file: UploadFile = File(...), user: dict = Depends(current_user)):
     s = get_settings()
     ext = Path(file.filename or "").suffix.lower()
     if ext not in EXCEL and ext != ".pdf":
@@ -61,6 +61,8 @@ async def upload(file: UploadFile = File(...)):
     data = await file.read()
     if len(data) > s.max_upload_mb * 1024 * 1024:
         raise HTTPException(413, f"File exceeds {s.max_upload_mb} MB")
+    if ext == ".pdf":  # reading a PDF can call the AI; an Excel file never does
+        count_ai_request(user)
     dest = s.upload_dir / f"{uuid.uuid4().hex}{ext}"
     dest.write_bytes(data)
     kind = "pdf" if ext == ".pdf" else "excel"
@@ -78,10 +80,12 @@ async def upload(file: UploadFile = File(...)):
 
 
 @router.post("/{upload_id}/reparse")
-def reparse(upload_id: int, body: ReparseRequest):
+def reparse(upload_id: int, body: ReparseRequest, user: dict = Depends(current_user)):
     up = db.one("SELECT * FROM uploads WHERE id=?", (upload_id,))
     if not up:
         raise HTTPException(404, "Upload not found")
+    if up["kind"] == "pdf":
+        count_ai_request(user)
     prev = json.loads(up["settings_json"] or "{}")
     settings = {"sheet": body.sheet or prev.get("sheet"), "mapping": body.mapping or prev.get("mapping"),
                 "layout": body.layout or prev.get("layout")}
@@ -99,9 +103,13 @@ def commit(upload_id: int, body: CommitRequest, user: dict = Depends(current_use
     up = db.one("SELECT * FROM uploads WHERE id=?", (upload_id,))
     if not up:
         raise HTTPException(404, "Upload not found")
+    if up["kind"] == "pdf":  # re-reading the PDF can call the AI
+        count_ai_request(user)
     parsed = _parse(up, json.loads(up["settings_json"] or "{}"))
     if not parsed["records"]:
         raise HTTPException(422, "No employee records to import. Check the column mapping.")
+    if up["kind"] != "pdf":  # importing standardizes the skills, which can call the AI
+        count_ai_request(user)
     result = repo.commit_records(parsed["records"], upload_id, body.mode)
     auth.audit(user, "upload_imported", {"upload_id": upload_id, "mode": body.mode, **{k: result[k] for k in ("created", "updated", "skills_imported")}})
     with db.connect() as c:
@@ -136,6 +144,7 @@ async def cv_preview(file: UploadFile, user: dict) -> dict:
     data = await file.read()
     if len(data) > s.max_upload_mb * 1024 * 1024:
         raise HTTPException(413, f"File exceeds {s.max_upload_mb} MB")
+    count_ai_request(user)  # reading a CV calls the AI (staff and member uploads both come through here)
     dest = s.upload_dir / f"{uuid.uuid4().hex}{ext}"
     dest.write_bytes(data)
     with db.connect() as c:

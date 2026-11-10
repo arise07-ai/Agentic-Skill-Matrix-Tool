@@ -3,7 +3,7 @@ open and sends it with each question. The server keeps the audit trail (who aske
 EVAL_LOG_ENABLED=false, appends each question, answer and the data the tools returned to the evaluation log (ai/eval_log.py)."""
 import json
 
-from ..ai.guardrails import GuardrailViolation, ToxicInputViolation, check_input
+from ..ai.guardrails import GuardrailViolation, ToxicInputViolation, check_input, passes_local_checks
 from ..ai.conversation import cached_conversational_reply, normalize_messages
 from . import prompts, tools
 from .runtime import AgentContext, AgentDef, AgentError, loop
@@ -14,14 +14,30 @@ def _tools():
             tools.t_related_skills(), tools.t_project_gaps(), tools.t_list_roles(), tools.t_search_taxonomy()]
 
 
+def drop_refused_turns(history: list[dict]) -> list[dict]:
+    """Earlier questions that fail the fast local checks were refused when they were asked: leave them out, together with the
+    reply that followed them, so they never reach the model or the evaluation log. The page also stops sending refused turns;
+    this is the server's own check. The newest message is not touched (it gets the full check_input)."""
+    kept, skip_reply = [], False
+    for m in history[:-1]:
+        if m["role"] == "user":
+            skip_reply = not passes_local_checks(m["content"])
+            if not skip_reply:
+                kept.append(m)
+        elif not skip_reply:
+            kept.append(m)
+    return [*kept, history[-1]]
+
+
 def run(ctx: AgentContext, inp: dict) -> dict:
     history = normalize_messages(inp.get("messages") or [])
     if not history or history[-1]["role"] != "user":
         raise AgentError("Ask a question first")
+    history = drop_refused_turns(history)
     try:  # the new question gets the input guardrails (injection, cursing/toxic language); earlier turns were checked when asked
         check_input(history[-1]["content"])
-    except ToxicInputViolation as e:
-        return {"answer": str(e), "employee_ids": []}
+    except ToxicInputViolation as e:  # answered politely, but marked so the page leaves this turn out of the history it sends
+        return {"answer": str(e), "employee_ids": [], "refused": True}
     except GuardrailViolation as e:
         raise AgentError(str(e)) from e
     cached_reply = cached_conversational_reply(history[-1]["content"], "chat")

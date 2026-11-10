@@ -247,12 +247,11 @@ def verify_picks(raw: object, plan: list[dict], courses: dict[str, list[dict]], 
         if skill not in hours or skill in out:
             notes.append(f"ignored a pick for an unknown or repeated skill: {skill!r}")
             continue
-        cs, planned, accepted, study_rejected = courses.get(skill, []), hours[skill], {}, False
+        cs, planned, accepted = courses.get(skill, []), hours[skill], {}
         for field, want_video in (("study", False), ("watch", True)):
             cid = row.get(f"{field}_id")
             if not cid:
                 continue
-            study_rejected = study_rejected or (field == "study" and not want_video)  # cleared below when the pick is accepted
             hit = by_id.get(str(cid))
             c = hit["course"] if hit and hit["skill"] == skill else None
             if c is None or (c.get("kind") == "video") != want_video:
@@ -267,11 +266,7 @@ def verify_picks(raw: object, plan: list[dict], courses: dict[str, list[dict]], 
                 notes.append(f"{skill}: {field} pick is longer than the planned hours but a shorter course exists")
                 continue
             accepted[field] = c
-            if field == "study":
-                study_rejected = False
-        for field, limit in (("why", 200), ("practice", 220)):
-            if field == "why" and study_rejected:  # the reason was written for a course the code replaced
-                continue
+        for field, limit in (("practice", 220),):  # "Why this choice" is written by code (why_choice), never by the model
             text = _clean_text(row.get(field), limit)
             if text:
                 accepted[field] = text
@@ -320,12 +315,8 @@ def describe_review(draft: object, picks: dict, by_id: dict[str, dict], review: 
             if not new or (prev and prev.get("url") == new.get("url") and prev.get("title") == new.get("title")):
                 continue
             changes.append(f"swapped the {noun} “{prev['title']}” for “{new['title']}”" if prev else f"picked the {noun} “{new['title']}”")
-        course_changed = bool(changes)
-        for field, words in (("why", "why this course suits you"), ("practice", "the practice task")):
-            if field == "why" and course_changed:  # a new course comes with its own reason
-                continue
-            if final.get(field) and final[field] != _clean_text(old.get(field), 220 if field == "practice" else 200):
-                changes.append(f"reworded {words}")
+        if final.get("practice") and final["practice"] != _clean_text(old.get("practice"), 220):
+            changes.append("reworded the practice task")
         if not changes:
             continue
         reason = reasons.get(skill, "")
@@ -369,6 +360,27 @@ def check_plan_text(markdown: str, gaps: list[dict], plan: list[dict], weeks: in
     return problems
 
 
+_ADVANCED = {"advanced", "expert"}
+
+
+def why_choice(study: dict, planned_hours: float, target: int) -> str:
+    """Why this study course was chosen, written by CODE from the course's own fields and the computed plan, so every claim in it is
+    a fact: its level, provider and length, whether it fits the hours planned, and whether its level matches the target level."""
+    level = str(study.get("level") or "").strip().lower()
+    text = (f"an {level} course" if level[0] in "aeiou" else f"a {level} course") if level else "a course"
+    if study.get("provider"):
+        text += f" from {study['provider']}"
+    duration = study.get("duration_hours")
+    if duration:
+        text += f" ({duration:g} h)"
+        if duration <= planned_hours:
+            text += f" that fits the {planned_hours:g} h planned for this skill"
+    wanted = _level(target)
+    if level and (level == wanted or (level in _ADVANCED and wanted == "expert")):
+        text += f", at the level you are aiming for ({LEVEL_NAMES.get(target, target)})"
+    return text[0].upper() + text[1:] + "."
+
+
 def template_plan(name: str, gaps: list[dict], courses: dict[str, list[dict]], weeks: int, hours: int, project: str,
                   picks: dict | None = None) -> str:
     """The whole plan, built from data. `picks` = the model's choices that verify_picks accepted (none = rule-based plan)."""
@@ -405,8 +417,8 @@ def template_plan(name: str, gaps: list[dict], courses: dict[str, list[dict]], w
         if g.get("related_skill"):
             lines.append(f"- Builds on: {g['related_skill']} ({g['related_rating']}/4), which you already have. Use it for the practice task.")
         note = (picks or {}).get(g["skill"], {})
-        if note.get("why"):
-            lines.append(f"- Why this choice: {note['why']}")
+        if study:
+            lines.append(f"- Why this choice: {why_choice(study, b['hours'], g['target'])}")
         lines.append(f"- Practice: {note['practice']}" if note.get("practice")
                      else f"- Practice: apply {g['skill']} to a small real task from the project backlog.")
         lines.append(f"- Check: demonstrate {g['skill']} at level {g['target']} to your lead.")

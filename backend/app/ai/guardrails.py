@@ -203,6 +203,16 @@ def check_output(text: str) -> tuple[str, list[str]]:
     return text, notes
 
 
+def passes_local_checks(text: str) -> bool:
+    """The fast checks of check_input that need no network call: length, injection patterns and the blocked-word list.
+    Used on EARLIER chat turns, which were fully checked when they were asked, so a refused one can be dropped cheaply."""
+    s = get_settings()
+    text = (text or "").strip()
+    if s.guardrails_provider.lower() == "none" or not text:
+        return True
+    return len(text) <= s.max_prompt_chars and not _INJECTION.search(text) and not toxicity.find_terms(text)
+
+
 def check_input(text: str, toxicity_check: bool = True) -> str:
     """Validate user-supplied text going into a prompt. Empty text is allowed (returns '').
     toxicity_check=False is for bulk employee data: skip toxicity, PII, and Jev privacy checks, but retain injection and NeMo checks."""

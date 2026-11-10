@@ -203,11 +203,15 @@ def _worker(run_id: str, agent: AgentDef, user: dict, input: dict) -> None:
             detail.update(question=str(msgs[-1].get("content", ""))[:300], employee_ids=sorted(ctx.returned_ids)[:100])
         auth.audit(user, "agent_run_finished", detail)
     except Exception as e:  # noqa: BLE001
-        log.exception("Agent run %s failed", run_id)
-        msg = mask_secrets(str(e) if isinstance(e, AgentError) else f"{type(e).__name__}: {e}")
+        # An AgentError is written for people. Anything else is unexpected: the page gets a plain message with a reference, and the
+        # error text goes only to the server log and the audit log (which only the admin can read).
+        ref = uuid.uuid4().hex[:6].upper()
+        log.exception("Agent run %s failed [ref %s]", run_id, ref)
+        detail = mask_secrets(str(e) if isinstance(e, AgentError) else f"{type(e).__name__}: {e}")
+        shown = detail if isinstance(e, AgentError) else f"Something went wrong on our side. Reference: {ref}"
         with db.connect() as c:
-            c.execute("UPDATE agent_runs SET status='error', error=?, finished_at=CURRENT_TIMESTAMP WHERE id=?", (msg[:1000], run_id))
-        auth.audit(user, "agent_run_failed", {"run": run_id, "agent": agent.key, "error": msg[:200]})
+            c.execute("UPDATE agent_runs SET status='error', error=?, finished_at=CURRENT_TIMESTAMP WHERE id=?", (shown[:1000], run_id))
+        auth.audit(user, "agent_run_failed", {"run": run_id, "agent": agent.key, "ref": ref, "error": detail[:200]})
 
 
 def answer_run(run_id: str, user: dict, text: str) -> None:

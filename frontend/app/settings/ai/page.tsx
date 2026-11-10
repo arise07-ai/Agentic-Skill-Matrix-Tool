@@ -3,8 +3,10 @@ import { useState } from "react";
 import { api, useApi } from "@/lib/api";
 import type { AiStatus } from "@/lib/types";
 import { Alert, Loading, Pill } from "@/components/ui";
+import { useUser } from "@/components/AppFrame";
 
 export default function AiSettingsPage() {
+  const { user } = useUser();
   const { data, error, loading, reload } = useApi<AiStatus>("/api/ai/status");
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -51,10 +53,12 @@ export default function AiSettingsPage() {
         <h2>Maintenance</h2>
         {msg && <Alert tone="info">{msg}</Alert>}
         <p className="muted">Re-index after changing the embedding model or Chroma location. Vectors are stored per embedding model, so old ones are never mixed in.</p>
-        <div className="row">
-          <button className="btn" onClick={reindex}>Re-index vectors</button>
-          <button className="btn danger" onClick={wipe}>Delete all employee data</button>
-        </div>
+        {user?.role === "admin" ? ( // the server allows both to the admin only
+          <div className="row">
+            <button className="btn" onClick={reindex}>Re-index vectors</button>
+            <button className="btn danger" onClick={wipe}>Delete all employee data</button>
+          </div>
+        ) : <p className="muted">Only an administrator can re-index or delete data.</p>}
       </div>
     </>
   );
