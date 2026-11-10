@@ -90,6 +90,31 @@ Two services (backend with a volume at `/app/data`, frontend), deployed from a p
 
 **"Why this choice" in study plans** (also in staffing's study plans) is written by code from the chosen course's own fields and the computed plan (`learning.why_choice`), e.g. "A beginner course from Microsoft Learn (0.5 h) that fits the 30 h planned for this skill." The model no longer writes it; it only picks the courses and writes the practice task.
 
+**"AI reviewer changed the draft" note** (Learning paths). A second model call reviews the planner's course picks. The note people see is written by code (`learning.describe_review`): it compares the draft with the courses the final plan actually uses and names them by title, e.g. "For LLMs & Prompt Engineering, I swapped the course "Introduction to generative AI for trainers" for "Introduction to prompt engineering with GitHub Copilot": it is shorter and closer to beginner level, so it fits the planned time." The model only supplies the short reason after the colon, which is dropped if it contains internal ids, field names, JSON or links; a change the app's own checks then overrode is not mentioned.
+
+## Interface
+
+**Light and dark mode.** The app follows the computer's setting by default. The **System / Light / Dark** switch in the top bar overrides it; the choice is remembered in this browser (`localStorage` key `sm-theme`) and applied before the first paint by a small script in `app/layout.tsx`, so the page never flashes the wrong theme.
+
+**Sidebar.** The button at the top left hides or shows the sidebar on desktop, remembered in this browser (`sm-nav`). On screens narrower than 820px the sidebar is a drawer over the page; it closes on a tap outside, with Escape, or when the page changes.
+
+**Look.** Neutral minimalist: Charcoal `#111827` and Off-White `#FAFAFA`, charcoal primary buttons (off-white in dark mode), flat surfaces with 1px borders, no gradients, drop shadows or emoji. Text uses the system font stack (SF Pro, Segoe UI, Roboto); skill-level numbers use the system monospace font so the matrix columns line up. All colours are CSS variables at the top of `frontend/app/globals.css`, with the dark values below them.
+
+**Colours with a meaning**, each used for one thing only:
+
+| Meaning | Colour | Where |
+|---|---|---|
+| Skill levels 1-4 | blue `#DBEAFE`, `#93C5FD`, `#2563EB`, `#1E3A8A` (same in both themes) | skill matrix cells and legend |
+| Verified / covered | green `#22C55E` | status labels and alerts |
+| Pending / at risk | amber `#EAB308` | status labels and alerts |
+| Gap / attention | red `#EF4444`, shown as an outline on a Gap label | status labels and alerts |
+
+The base status colours are used for dots, outlines and tints; text uses darker shades of the same hues because the base colours are too light to read as text on white. Every text and background pair was checked for WCAG AA contrast (4.5:1).
+
+**Skill matrix.** Thin gridlines outline every cell, with the column lines running up into the skill names. An empty cell (skill not listed) is blank; an unrated skill shows a dashed `?`. On phones the name column is narrower and long names are shortened (the full name and roles are in the tooltip).
+
+**Tab icon.** The sidebar logo is the browser-tab icon (`frontend/app/icon.svg`, picked up by Next.js automatically).
+
 ## Status of each piece (honest list)
 
 Last updated: 10 November 2026.
@@ -105,6 +130,7 @@ Last updated: 10 November 2026.
 - Redis (the in-memory fallback is what was exercised), Langfuse / LangSmith tracing, the Udemy Affiliate API (sample data only), and Unsloth fine-tuning (instructions only, no trained model served).
 - A full check of the Railway deployment. It is live at <https://aiskillmatrix.up.railway.app/>, but not every component above has been verified there.
 - One session per user, the session list, single-decision approvals, the stored login lock-out, role limits, the AI rate limit, plain 500 errors and the refused chat turns: covered by unit tests (`tests/test_sessions.py`, `tests/test_open_items.py`) and API-level checks on a temporary database, not yet tried in a browser or on Railway. The code-written "Why this choice" line was checked on a real learning plan with the live model.
+- The interface (both themes, the hidden sidebar, the phone drawer, the matrix colours and grid) was checked in headless Chrome against a copy of the local data, not yet on Railway.
 - Evaluation is on a small fictional set (about 33 chat, 15 learning, 9 coach cases, 21 standardization cases): use the numbers to catch regressions, not as a quality guarantee.
 
 **Open items**
