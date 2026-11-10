@@ -13,9 +13,9 @@ export function SeniorityBadge({ s }: { s?: { level: string; reason: string } })
 }
 
 export function Cell({ rating }: { rating: number | null | undefined }) {
-  if (rating === undefined) return <div className="cell" title="Not listed">·</div>;
+  if (rating === undefined) return <div className="cell" title="Not listed" aria-label="Not listed">·</div>;
   if (rating === null) return <div className="cell unrated" title="Skill listed without a rating">?</div>;
-  return <div className={`cell r${rating + 1}`} title={`Level ${rating} (${levelName(rating)}) / 4`}>{rating}</div>;  // r1..r5 is the existing colour ramp: levels 0-4 use r1..r5
+  return <div className={`cell lv${rating}`} title={`Level ${rating} (${levelName(rating)}) / 4`}>{rating}</div>;  // lv0..lv4: the coral level scale in globals.css
 }
 
 export function Pill({ children, tone }: { children: React.ReactNode; tone?: "ok" | "warn" | "bad" | "info" }) {

@@ -48,7 +48,7 @@ export default function MatrixPage() {
             <tbody>
               {data.employees.map((e) => (
                 <tr key={e.id}>
-                  <td className="who"><Link href={`/employees/${e.id}`}>{e.name}</Link><div className="muted" style={{ fontSize: 11.5 }}>{e.roles.join(", ")}</div></td>
+                  <td className="who" title={`${e.name}${e.roles.length ? " · " + e.roles.join(", ") : ""}`}><Link href={`/employees/${e.id}`}>{e.name}</Link><div className="muted" style={{ fontSize: 11.5 }}>{e.roles.join(", ")}</div></td>
                   {data.skills.map((s) => <td key={`${s.category}:${s.name}`}><Cell rating={data.cells[String(e.id)]?.[s.name]} /></td>)}
                 </tr>
               ))}

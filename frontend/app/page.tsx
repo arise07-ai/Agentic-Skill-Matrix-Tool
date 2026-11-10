@@ -39,7 +39,7 @@ export default function DashboardPage() {
       <div className="dashboard-kpis">
         <div className="dashboard-kpi"><div className="kpi-label">PEOPLE</div><div className="kpi-value">{data.employees.toLocaleString()}</div><div className="kpi-note">in current workforce</div></div>
         <div className="dashboard-kpi"><div className="kpi-label">STANDARDIZED SKILLS</div><div className="kpi-value">{data.skills.toLocaleString()}</div><div className="kpi-note">distinct capabilities</div></div>
-        <div className="dashboard-kpi"><div className="kpi-label">MEAN PROFICIENCY</div><div className="kpi-value">{data.avg_rating ?? "–"}<small>{data.avg_rating !== null ? " / 5" : ""}</small></div><div className="kpi-note">across rated skills</div></div>
+        <div className="dashboard-kpi"><div className="kpi-label">MEAN PROFICIENCY</div><div className="kpi-value">{data.avg_rating ?? "–"}<small>{data.avg_rating !== null ? " / 4" : ""}</small></div><div className="kpi-note">across rated skills</div></div>
         <div className="dashboard-kpi"><div className="kpi-label">UNRATED ENTRIES</div><div className="kpi-value">{data.unrated.toLocaleString()}</div><div className="kpi-note">ratings to complete</div></div>
       </div>
       <div className="dashboard-grid">

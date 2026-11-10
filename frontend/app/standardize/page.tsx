@@ -124,7 +124,7 @@ export default function StandardizePage() {
       )}
       {tab !== "requested" && loading && <Loading />}
       {tab !== "requested" && error && <Alert tone="bad">{error}</Alert>}
-      {tab !== "requested" && data && data.length === 0 && <Empty>{tab === "needs_review" ? "Nothing to review. 🎉" : "No skills yet."}</Empty>}
+      {tab !== "requested" && data && data.length === 0 && <Empty>{tab === "needs_review" ? "Nothing to review." : "No skills yet."}</Empty>}
       {tab !== "requested" && data && data.length > 0 && (
         <div className="card tablewrap">
           <table>
