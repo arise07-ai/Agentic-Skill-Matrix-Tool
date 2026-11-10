@@ -1,0 +1,34 @@
+# Blocked words, one per line (English). Lines starting with # are ignored. Whole words only, any capitalisation;
+# common disguises are caught too (f*ck, sh1t, fuuuck, f.u.c.k). Add or remove words freely and restart the backend.
+# This list is profanity and strong insults. Hate speech, threats and harassment are left to the model check
+# (GUARDRAILS_TOXICITY=both), which understands context.
+fuck
+fucking
+fucker
+fucked
+motherfucker
+shit
+shitty
+bullshit
+shithead
+bitch
+bastard
+asshole
+dumbass
+jackass
+dick
+dickhead
+prick
+pussy
+cunt
+twat
+wanker
+bollocks
+slut
+whore
+douchebag
+scumbag
+piss off
+idiot
+moron
+imbecile

@@ -1,0 +1,551 @@
+{
+  "Python": {
+    "category": "Programming",
+    "aliases": [
+      "python3",
+      "py",
+      "python 3"
+    ]
+  },
+  "JavaScript": {
+    "category": "Programming",
+    "aliases": [
+      "js",
+      "ecmascript",
+      "es6"
+    ]
+  },
+  "TypeScript": {
+    "category": "Programming",
+    "aliases": [
+      "ts"
+    ]
+  },
+  "Java": {
+    "category": "Programming",
+    "aliases": [
+      "core java",
+      "java se"
+    ]
+  },
+  "C#": {
+    "category": "Programming",
+    "aliases": [
+      "csharp",
+      "c sharp"
+    ]
+  },
+  "C++": {
+    "category": "Programming",
+    "aliases": [
+      "cpp",
+      "c plus plus"
+    ]
+  },
+  "Go": {
+    "category": "Programming",
+    "aliases": [
+      "golang"
+    ]
+  },
+  "Rust": {
+    "category": "Programming",
+    "aliases": []
+  },
+  "PHP": {
+    "category": "Programming",
+    "aliases": []
+  },
+  "Ruby": {
+    "category": "Programming",
+    "aliases": [
+      "ruby on rails",
+      "rails"
+    ]
+  },
+  "Kotlin": {
+    "category": "Programming",
+    "aliases": []
+  },
+  "Swift": {
+    "category": "Programming",
+    "aliases": []
+  },
+  "R": {
+    "category": "Programming",
+    "aliases": [
+      "r language",
+      "r programming"
+    ]
+  },
+  "React": {
+    "category": "Frontend",
+    "aliases": [
+      "react.js",
+      "reactjs",
+      "react js"
+    ]
+  },
+  "Angular": {
+    "category": "Frontend",
+    "aliases": [
+      "angularjs",
+      "angular.js"
+    ]
+  },
+  "Vue.js": {
+    "category": "Frontend",
+    "aliases": [
+      "vue",
+      "vuejs"
+    ]
+  },
+  "Next.js": {
+    "category": "Frontend",
+    "aliases": [
+      "nextjs",
+      "next js"
+    ]
+  },
+  "HTML/CSS": {
+    "category": "Frontend",
+    "aliases": [
+      "html",
+      "css",
+      "html5",
+      "css3",
+      "html & css"
+    ]
+  },
+  "Tailwind CSS": {
+    "category": "Frontend",
+    "aliases": [
+      "tailwind"
+    ]
+  },
+  "Node.js": {
+    "category": "Backend",
+    "aliases": [
+      "node",
+      "nodejs",
+      "node js",
+      "express",
+      "express.js"
+    ]
+  },
+  "FastAPI": {
+    "category": "Backend",
+    "aliases": [
+      "fast api"
+    ]
+  },
+  "Django": {
+    "category": "Backend",
+    "aliases": []
+  },
+  "Flask": {
+    "category": "Backend",
+    "aliases": []
+  },
+  "Spring Boot": {
+    "category": "Backend",
+    "aliases": [
+      "spring",
+      "springboot"
+    ]
+  },
+  ".NET": {
+    "category": "Backend",
+    "aliases": [
+      "dotnet",
+      "asp.net",
+      ".net core",
+      "dot net"
+    ]
+  },
+  "REST APIs": {
+    "category": "Backend",
+    "aliases": [
+      "rest",
+      "restful",
+      "rest api",
+      "api design",
+      "restful apis"
+    ]
+  },
+  "GraphQL": {
+    "category": "Backend",
+    "aliases": []
+  },
+  "Microservices": {
+    "category": "Backend",
+    "aliases": [
+      "microservice architecture"
+    ]
+  },
+  "SQL": {
+    "category": "Data",
+    "aliases": [
+      "t-sql",
+      "pl/sql",
+      "structured query language"
+    ]
+  },
+  "PostgreSQL": {
+    "category": "Data",
+    "aliases": [
+      "postgres",
+      "psql"
+    ]
+  },
+  "MySQL": {
+    "category": "Data",
+    "aliases": [
+      "mariadb"
+    ]
+  },
+  "MongoDB": {
+    "category": "Data",
+    "aliases": [
+      "mongo"
+    ]
+  },
+  "Redis": {
+    "category": "Data",
+    "aliases": []
+  },
+  "Data Analysis": {
+    "category": "Data",
+    "aliases": [
+      "data analytics",
+      "analytics",
+      "data analyst"
+    ]
+  },
+  "Data Engineering": {
+    "category": "Data",
+    "aliases": [
+      "etl",
+      "data pipelines",
+      "data pipeline"
+    ]
+  },
+  "Apache Spark": {
+    "category": "Data",
+    "aliases": [
+      "spark",
+      "pyspark"
+    ]
+  },
+  "Power BI": {
+    "category": "Data",
+    "aliases": [
+      "powerbi",
+      "power-bi"
+    ]
+  },
+  "Tableau": {
+    "category": "Data",
+    "aliases": []
+  },
+  "Excel": {
+    "category": "Data",
+    "aliases": [
+      "ms excel",
+      "microsoft excel",
+      "advanced excel"
+    ]
+  },
+  "Machine Learning": {
+    "category": "AI/ML",
+    "aliases": [
+      "ml",
+      "predictive modeling"
+    ]
+  },
+  "Deep Learning": {
+    "category": "AI/ML",
+    "aliases": [
+      "dl",
+      "neural networks"
+    ]
+  },
+  "NLP": {
+    "category": "AI/ML",
+    "aliases": [
+      "natural language processing",
+      "text mining"
+    ]
+  },
+  "LLMs & Prompt Engineering": {
+    "category": "AI/ML",
+    "aliases": [
+      "llm",
+      "llms",
+      "prompt engineering",
+      "generative ai",
+      "genai",
+      "gpt",
+      "chatgpt",
+      "prompt design",
+      "prompting"
+    ]
+  },
+  "LangChain": {
+    "category": "AI/ML",
+    "aliases": [
+      "langgraph"
+    ]
+  },
+  "PyTorch": {
+    "category": "AI/ML",
+    "aliases": [
+      "torch"
+    ]
+  },
+  "TensorFlow": {
+    "category": "AI/ML",
+    "aliases": [
+      "tf",
+      "keras"
+    ]
+  },
+  "MLOps": {
+    "category": "AI/ML",
+    "aliases": [
+      "ml ops",
+      "model deployment"
+    ]
+  },
+  "AWS": {
+    "category": "Cloud & DevOps",
+    "aliases": [
+      "amazon web services",
+      "aws cloud"
+    ]
+  },
+  "Azure": {
+    "category": "Cloud & DevOps",
+    "aliases": [
+      "microsoft azure",
+      "azure cloud"
+    ]
+  },
+  "Google Cloud": {
+    "category": "Cloud & DevOps",
+    "aliases": [
+      "gcp",
+      "google cloud platform"
+    ]
+  },
+  "Docker": {
+    "category": "Cloud & DevOps",
+    "aliases": [
+      "containers",
+      "containerization"
+    ]
+  },
+  "Kubernetes": {
+    "category": "Cloud & DevOps",
+    "aliases": [
+      "k8s"
+    ]
+  },
+  "CI/CD": {
+    "category": "Cloud & DevOps",
+    "aliases": [
+      "cicd",
+      "continuous integration",
+      "continuous delivery",
+      "jenkins",
+      "github actions"
+    ]
+  },
+  "Terraform": {
+    "category": "Cloud & DevOps",
+    "aliases": [
+      "infrastructure as code",
+      "iac"
+    ]
+  },
+  "Linux": {
+    "category": "Cloud & DevOps",
+    "aliases": [
+      "unix",
+      "linux administration",
+      "bash"
+    ]
+  },
+  "Git": {
+    "category": "Cloud & DevOps",
+    "aliases": [
+      "github",
+      "gitlab",
+      "version control"
+    ]
+  },
+  "Cybersecurity": {
+    "category": "Security",
+    "aliases": [
+      "information security",
+      "infosec",
+      "security"
+    ]
+  },
+  "Network Security": {
+    "category": "Security",
+    "aliases": [
+      "network defense",
+      "firewalls"
+    ]
+  },
+  "Penetration Testing": {
+    "category": "Security",
+    "aliases": [
+      "pentesting",
+      "pen testing",
+      "ethical hacking"
+    ]
+  },
+  "Test Automation": {
+    "category": "QA",
+    "aliases": [
+      "automated testing",
+      "selenium",
+      "cypress",
+      "playwright"
+    ]
+  },
+  "Manual Testing": {
+    "category": "QA",
+    "aliases": [
+      "qa testing",
+      "functional testing"
+    ]
+  },
+  "Performance Testing": {
+    "category": "QA",
+    "aliases": [
+      "load testing",
+      "jmeter"
+    ]
+  },
+  "UI/UX Design": {
+    "category": "Design",
+    "aliases": [
+      "ux design",
+      "ui design",
+      "user experience",
+      "ux",
+      "ui"
+    ]
+  },
+  "Figma": {
+    "category": "Design",
+    "aliases": []
+  },
+  "Project Management": {
+    "category": "Management",
+    "aliases": [
+      "pm",
+      "project planning",
+      "pmp",
+      "project manager",
+      "project mgmt",
+      "project mgt"
+    ]
+  },
+  "Agile/Scrum": {
+    "category": "Management",
+    "aliases": [
+      "agile",
+      "scrum",
+      "kanban",
+      "scrum master",
+      "agile methodologies"
+    ]
+  },
+  "Product Management": {
+    "category": "Management",
+    "aliases": [
+      "product owner",
+      "product ownership"
+    ]
+  },
+  "Business Analysis": {
+    "category": "Management",
+    "aliases": [
+      "requirements gathering",
+      "business analyst",
+      "ba"
+    ]
+  },
+  "Risk Management": {
+    "category": "Management",
+    "aliases": []
+  },
+  "Stakeholder Management": {
+    "category": "Management",
+    "aliases": [
+      "stakeholder engagement"
+    ]
+  },
+  "Leadership": {
+    "category": "Soft Skills",
+    "aliases": [
+      "team leadership",
+      "people management",
+      "team lead"
+    ]
+  },
+  "Communication": {
+    "category": "Soft Skills",
+    "aliases": [
+      "communication skills",
+      "verbal communication",
+      "written communication"
+    ]
+  },
+  "Problem Solving": {
+    "category": "Soft Skills",
+    "aliases": [
+      "troubleshooting",
+      "analytical thinking"
+    ]
+  },
+  "Mentoring": {
+    "category": "Soft Skills",
+    "aliases": [
+      "coaching"
+    ]
+  },
+  "Presentation Skills": {
+    "category": "Soft Skills",
+    "aliases": [
+      "public speaking",
+      "presenting"
+    ]
+  },
+  "Recruitment": {
+    "category": "HR",
+    "aliases": [
+      "talent acquisition",
+      "hiring",
+      "sourcing"
+    ]
+  },
+  "Performance Management": {
+    "category": "HR",
+    "aliases": [
+      "performance appraisal"
+    ]
+  },
+  "Learning & Development": {
+    "category": "HR",
+    "aliases": [
+      "l&d",
+      "training and development",
+      "employee training"
+    ]
+  }
+}
