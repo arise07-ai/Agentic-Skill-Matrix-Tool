@@ -1,0 +1,13 @@
+models:
+  - type: main
+    engine: openai
+    model: gpt-4.1-mini
+    api_key_env_var: OPENAI_API_KEY
+
+rails:
+  input:
+    flows:
+      - self check input
+  output:
+    flows:
+      - self check output

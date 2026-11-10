@@ -1,0 +1,4 @@
+# Only for running evaluations (python -m app.ai.evaluation). NOT installed in the production image.
+#   pip install -r requirements-eval.txt
+-r requirements.txt
+ragas>=0.2

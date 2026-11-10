@@ -1,0 +1,321 @@
+{
+  "_note": "FICTIONAL test people, invented as a draft for review. Names, roles and ratings are NOT real data. Edit freely, but then update golden_set.json so every ground truth still matches (python -m app.ai.evaluation --golden-check). Ratings are on the 0-4 scale (0 None, 1 Learned, 2 Applied, 3 Experienced, 4 Mastered).",
+  "people": [
+    {
+      "employee_no": "G001",
+      "name": "John Doe",
+      "roles": [
+        "Backend Developer"
+      ],
+      "skills": [
+        {
+          "raw_skill": "Python",
+          "rating": 3
+        },
+        {
+          "raw_skill": "FastAPI",
+          "rating": 3
+        },
+        {
+          "raw_skill": "PostgreSQL",
+          "rating": 2
+        },
+        {
+          "raw_skill": "Docker",
+          "rating": 2
+        },
+        {
+          "raw_skill": "REST APIs",
+          "rating": 3
+        }
+      ],
+      "background": "Five years building internal APIs."
+    },
+    {
+      "employee_no": "G002",
+      "name": "Jane Smith",
+      "roles": [
+        "Data Scientist"
+      ],
+      "skills": [
+        {
+          "raw_skill": "Python",
+          "rating": 4
+        },
+        {
+          "raw_skill": "Machine Learning",
+          "rating": 4
+        },
+        {
+          "raw_skill": "SQL",
+          "rating": 3
+        },
+        {
+          "raw_skill": "PyTorch",
+          "rating": 3
+        },
+        {
+          "raw_skill": "NLP",
+          "rating": 2
+        },
+        {
+          "raw_skill": "Data Analysis",
+          "rating": 3
+        }
+      ],
+      "background": "Applied ML for forecasting."
+    },
+    {
+      "employee_no": "G003",
+      "name": "Emily Zhang",
+      "roles": [
+        "UI/UX Designer"
+      ],
+      "skills": [
+        {
+          "raw_skill": "UI/UX Design",
+          "rating": 4
+        },
+        {
+          "raw_skill": "Figma",
+          "rating": 4
+        },
+        {
+          "raw_skill": "HTML/CSS",
+          "rating": 3
+        },
+        {
+          "raw_skill": "React",
+          "rating": 2
+        },
+        {
+          "raw_skill": "Communication",
+          "rating": 3
+        }
+      ],
+      "background": "Design lead for consumer apps."
+    },
+    {
+      "employee_no": "G004",
+      "name": "Michael Johnson",
+      "roles": [
+        "DevOps Engineer"
+      ],
+      "skills": [
+        {
+          "raw_skill": "Docker",
+          "rating": 4
+        },
+        {
+          "raw_skill": "Kubernetes",
+          "rating": 3
+        },
+        {
+          "raw_skill": "Terraform",
+          "rating": 3
+        },
+        {
+          "raw_skill": "AWS",
+          "rating": 3
+        },
+        {
+          "raw_skill": "CI/CD",
+          "rating": 4
+        },
+        {
+          "raw_skill": "Linux",
+          "rating": 3
+        }
+      ],
+      "background": "Runs the platform team."
+    },
+    {
+      "employee_no": "G005",
+      "name": "Sarah Lee",
+      "roles": [
+        "Product Manager"
+      ],
+      "skills": [
+        {
+          "raw_skill": "Product Management",
+          "rating": 3
+        },
+        {
+          "raw_skill": "Agile/Scrum",
+          "rating": 3
+        },
+        {
+          "raw_skill": "Stakeholder Management",
+          "rating": 3
+        },
+        {
+          "raw_skill": "Communication",
+          "rating": 4
+        },
+        {
+          "raw_skill": "Business Analysis",
+          "rating": 2
+        },
+        {
+          "raw_skill": "Leadership",
+          "rating": 2
+        }
+      ],
+      "background": "Owns two B2B products."
+    },
+    {
+      "employee_no": "G006",
+      "name": "Priya Nair",
+      "roles": [
+        "Frontend Developer"
+      ],
+      "skills": [
+        {
+          "raw_skill": "React",
+          "rating": 4
+        },
+        {
+          "raw_skill": "TypeScript",
+          "rating": 3
+        },
+        {
+          "raw_skill": "JavaScript",
+          "rating": 4
+        },
+        {
+          "raw_skill": "HTML/CSS",
+          "rating": 3
+        },
+        {
+          "raw_skill": "Next.js",
+          "rating": 2
+        },
+        {
+          "raw_skill": "Tailwind CSS",
+          "rating": 3
+        }
+      ],
+      "background": "Builds design-system components."
+    },
+    {
+      "employee_no": "G007",
+      "name": "Carlos Mendes",
+      "roles": [
+        "Security Engineer"
+      ],
+      "skills": [
+        {
+          "raw_skill": "Network Security",
+          "rating": 3
+        },
+        {
+          "raw_skill": "Penetration Testing",
+          "rating": 2
+        },
+        {
+          "raw_skill": "Linux",
+          "rating": 2
+        },
+        {
+          "raw_skill": "Python",
+          "rating": 2
+        }
+      ],
+      "background": "Security reviews and testing."
+    },
+    {
+      "employee_no": "G008",
+      "name": "Aiko Tanaka",
+      "roles": [
+        "QA Engineer"
+      ],
+      "skills": [
+        {
+          "raw_skill": "Test Automation",
+          "rating": 3
+        },
+        {
+          "raw_skill": "Manual Testing",
+          "rating": 4
+        },
+        {
+          "raw_skill": "Performance Testing",
+          "rating": 2
+        },
+        {
+          "raw_skill": "SQL",
+          "rating": 2
+        },
+        {
+          "raw_skill": "Agile/Scrum",
+          "rating": 2
+        }
+      ],
+      "background": "Test lead on two products."
+    },
+    {
+      "employee_no": "G009",
+      "name": "David Okafor",
+      "roles": [
+        "Machine Learning Engineer"
+      ],
+      "skills": [
+        {
+          "raw_skill": "Machine Learning",
+          "rating": 3
+        },
+        {
+          "raw_skill": "MLOps",
+          "rating": 2
+        },
+        {
+          "raw_skill": "PyTorch",
+          "rating": 2
+        },
+        {
+          "raw_skill": "Python",
+          "rating": 3
+        },
+        {
+          "raw_skill": "Docker",
+          "rating": 2
+        },
+        {
+          "raw_skill": "AWS",
+          "rating": 2
+        }
+      ],
+      "background": "Ships models to production."
+    },
+    {
+      "employee_no": "G010",
+      "name": "Maria Santos",
+      "roles": [
+        "Project Manager"
+      ],
+      "skills": [
+        {
+          "raw_skill": "Agile/Scrum",
+          "rating": 4
+        },
+        {
+          "raw_skill": "Risk Management",
+          "rating": 3
+        },
+        {
+          "raw_skill": "Stakeholder Management",
+          "rating": 3
+        },
+        {
+          "raw_skill": "Leadership",
+          "rating": 3
+        },
+        {
+          "raw_skill": "Communication",
+          "rating": 3
+        }
+      ],
+      "background": "Delivers cross-team IT projects."
+    }
+  ]
+}

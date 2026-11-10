@@ -1,0 +1,53 @@
+[
+  {
+    "question": "What are the key competencies for a Product Owner in the HealthTech sector that we should be focusing on for our talent development program?",
+    "contexts": [
+      "### Skill Standards for Product Owner in HealthTech\n- **Stakeholder Management**: Ability to gather requirements and align diverse teams towards a common vision.\n- **Agile Methodologies**: Proficient in Scrum and Kanban principles, facilitating sprints and backlog prioritization.\n- **User-Centered Design**: Strong understanding of user experience principles to drive product usability.\n- **Data-Driven Decision Making**: Experience with analytics tools to measure product success and iterate on feedback.\n- **Compliance Knowledge**: Understanding of healthcare regulations like HIPAA and how they impact product development."
+    ],
+    "answer": "The key competencies for a Product Owner in the HealthTech sector to focus on are Stakeholder Management, Agile Methodologies (Scrum and Kanban), User-Centered Design, Data-Driven Decision Making, and Compliance Knowledge related to healthcare regulations like HIPAA.",
+    "ground_truth": "The key competencies for a Product Owner in the HealthTech sector include: Stakeholder Management, Agile Methodologies, User-Centered Design, Data-Driven Decision Making, and Compliance Knowledge.",
+    "metadata": {
+      "pillar": "Skill Standardization",
+      "record_index": 1
+    },
+    "meta": {
+      "pillar": "Skill Standardization",
+      "record_index": 1,
+      "kind": "skill_standardization"
+    }
+  },
+  {
+    "question": "Can you help me understand what specific skills a Data Analyst should hold to meet our current project needs?",
+    "contexts": [
+      "## Data Analyst Skills Overview\nA Data Analyst should possess the following key skills:\n\n1. **Statistical Analysis**: Proficiency in statistical methods to interpret data sets.\n2. **Data Visualization**: Experience with tools like Tableau or Power BI to create reports and dashboards.\n3. **SQL Proficiency**: Strong understanding of SQL for database querying and manipulation.\n4. **Excel Expertise**: Advanced skills in Excel for data management and complex calculations.\n5. **Problem-Solving**: Ability to analyze business challenges and provide insightful recommendations based on data.\n\n### Additional Soft Skills\n- Communication: Ability to convey findings to non-technical stakeholders.\n- Team Collaboration: Experience working in cross-functional teams.\n\n### Industry Experience\n- Familiarity with finance industry metrics would be an advantage, particularly knowledge of KPIs relevant to financial analysis."
+    ],
+    "answer": "A Data Analyst should have proficiency in statistical analysis, data visualization using tools like Tableau or Power BI, strong SQL skills, advanced Excel expertise, and problem-solving abilities. Additionally, communication skills to explain findings to non-technical stakeholders and experience in team collaboration are important. Familiarity with finance industry metrics and relevant KPIs would also be advantageous for your project.",
+    "ground_truth": "A Data Analyst should have skills in statistical analysis, data visualization (using tools like Tableau or Power BI), SQL proficiency, Excel expertise, problem-solving, communication, and team collaboration. Additionally, familiarity with finance industry metrics is advantageous.",
+    "metadata": {
+      "pillar": "Skill Standardization",
+      "record_index": 2
+    },
+    "meta": {
+      "pillar": "Skill Standardization",
+      "record_index": 2,
+      "kind": "skill_standardization"
+    }
+  },
+  {
+    "question": "Can you clarify the key skills needed for a Junior Data Analyst role in our healthcare division?",
+    "contexts": [
+      "### Junior Data Analyst - Skill Standards\n\n**Overview:** The Junior Data Analyst will support data-driven decision making within the healthcare industry, focusing on patient data analytics and reporting.\n\n**Essential Skills:**  \n- **Statistical Analysis:** Proficiency in statistical methods and analytics tools such as R, Python, or SAS.  \n- **Data Visualization:** Experience with visualization tools like Tableau or Power BI to create insightful reports.  \n- **Database Management:** Familiarity with SQL for data extraction and manipulation.  \n- **Healthcare Knowledge:** Understanding of EHR systems and healthcare regulations.  \n- **Communication:** Strong ability to communicate findings to non-technical stakeholders clearly.  \n\n**Desired Qualifications:**  \n- Bachelor’s degree in Data Science, Statistics, or a related field.  \n- Coursework or experience in healthcare-focused analytics is a plus."
+    ],
+    "answer": "The key skills needed for a Junior Data Analyst role in the healthcare division are proficiency in statistical analysis using tools like R, Python, or SAS; experience with data visualization tools such as Tableau or Power BI; familiarity with SQL for database management; understanding of EHR systems and healthcare regulations; and strong communication skills to explain findings to non-technical stakeholders.",
+    "ground_truth": "Key skills for a Junior Data Analyst in our healthcare division include:\n1. Proficiency in statistical analysis tools (R, Python, SAS).\n2. Data visualization skills using tools like Tableau or Power BI.\n3. Database management experience, particularly with SQL.\n4. Understanding of Electronic Health Records (EHR) systems and healthcare regulations.\n5. Strong communication skills for translating data insights to non-technical stakeholders.",
+    "metadata": {
+      "pillar": "Skill Standardization",
+      "record_index": 3
+    },
+    "meta": {
+      "pillar": "Skill Standardization",
+      "record_index": 3,
+      "kind": "skill_standardization"
+    }
+  }
+]

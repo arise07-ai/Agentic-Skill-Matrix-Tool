@@ -1,0 +1,34 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
+pydantic>=2.7
+pydantic-settings>=2.3
+httpx>=0.27
+
+# File parsing
+pandas>=2.2
+openpyxl>=3.1
+pdfplumber>=0.11
+
+# Standardization
+rapidfuzz>=3.9
+numpy>=1.26
+
+# AI stack (all optional at runtime; see ../AI_INTEGRATION.md)
+chromadb>=0.5
+flashrank>=0.2.10
+redis>=5.0
+langchain-core>=0.3
+langchain-openai>=0.2
+langgraph>=0.2
+
+# Optional observability / guardrails (all of these are used in production; evaluation tools are in requirements-eval.txt)
+langsmith>=0.1
+gptcache>=0.1.43     # semantic cache layer (GPTCACHE_ENABLED=true)
+faiss-cpu>=1.8,<2    # GPTCache's local FAISS similarity index
+onnxruntime>=1.18    # local GPTCache embeddings
+tokenizers>=0.15     # loaded directly to avoid importing PyTorch with FAISS
+huggingface-hub>=0.23  # download GPTCache's ONNX model and tokenizer
+guardrails-ai>=0.5
+nemoguardrails>=0.16,<0.25
+typesafe-sdk>=0.7
