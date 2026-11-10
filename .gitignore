@@ -143,3 +143,5 @@ railway.env.backend.ready
 !backend/app/data/**
 
 railway.env.backend.ready
+
+railway.env.backend.ready
