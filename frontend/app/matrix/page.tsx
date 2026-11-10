@@ -37,7 +37,7 @@ export default function MatrixPage() {
       {error && <Alert tone="bad">{error}</Alert>}
       {data && data.employees.length === 0 && <Empty>No employees yet. <Link href="/upload">Upload data</Link></Empty>}
       {data && data.employees.length > 0 && (
-        <div className="card tablewrap">
+        <div className="card tablewrap matrix-wrap">
           <table className="heat">
             <thead>
               <tr>

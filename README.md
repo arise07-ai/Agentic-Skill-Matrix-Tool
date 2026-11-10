@@ -107,14 +107,14 @@ Two services (backend with a volume at `/app/data`, frontend), deployed from a p
 
 | Meaning | Colour | Where |
 |---|---|---|
-| Skill levels 1-4 | blue `#DBEAFE`, `#93C5FD`, `#2563EB`, `#1E3A8A` (same in both themes) | skill matrix cells and legend |
+| Skill levels 1-4 | blue: soft steel blue in light mode (`#E8F1FB`, `#C9DDF4`, `#8DB4E2`, `#3F6FA8`), brighter blue in dark mode (`#DBEAFE`, `#93C5FD`, `#2563EB`, `#1E3A8A`) | skill matrix cells and legend |
 | Verified / covered | green `#22C55E` | status labels and alerts |
 | Pending / at risk | amber `#EAB308` | status labels and alerts |
 | Gap / attention | red `#EF4444`, shown as an outline on a Gap label | status labels and alerts |
 
 The base status colours are used for dots, outlines and tints; text uses darker shades of the same hues because the base colours are too light to read as text on white. Every text and background pair was checked for WCAG AA contrast (4.5:1).
 
-**Skill matrix.** Thin gridlines outline every cell, with the column lines running up into the skill names. An empty cell (skill not listed) is blank; an unrated skill shows a dashed `?`. On phones the name column is narrower and long names are shortened (the full name and roles are in the tooltip).
+**Skill matrix.** Thin gridlines outline every cell, with the column lines running up into the skill names. The name column stays in place when the matrix scrolls sideways, and the skill cells pass underneath it. An empty cell (skill not listed) is blank; an unrated skill shows a dashed `?`. On phones the name column is narrower and long names are shortened (the full name and roles are in the tooltip).
 
 **Tab icon.** The sidebar logo is the browser-tab icon (`frontend/app/icon.svg`, picked up by Next.js automatically).
 

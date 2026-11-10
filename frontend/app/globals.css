@@ -11,11 +11,12 @@
   --ok: #15803D; --ok-soft: rgb(34 197 94 / 12%); --ok-mark: #22C55E;
   --warn: #A16207; --warn-soft: rgb(234 179 8 / 14%); --warn-mark: #EAB308;
   --bad: #B91C1C; --bad-soft: rgb(239 68 68 / 10%); --bad-mark: #EF4444;
-  /* skill levels 1-4: a blue scale, the same in both themes. Blue is used for nothing else in the app, so a level never looks
-     like a status (green / amber / red) or like the grey interface. Text contrast: 12.0, 8.1, 5.2 and 10.4 : 1 */
+  /* skill levels 1-4: a blue scale (blue is used for nothing else in the app, so a level never looks like a status or like the
+     grey interface). Light mode: soft steel blue, calmer on white; text contrast 12.8, 10.5, 6.8, 5.2 : 1.
+     Dark mode (below): a brighter blue that stands out on charcoal; text contrast 12.0, 8.1, 5.2, 10.4 : 1. */
   --lv0: #F3F4F6; --lv0-ink: #6B7280;
-  --lv1: #DBEAFE; --lv1-ink: #1E293B; --lv2: #93C5FD; --lv2-ink: #1E293B;
-  --lv3: #2563EB; --lv3-ink: #FFFFFF; --lv4: #1E3A8A; --lv4-ink: #FFFFFF;
+  --lv1: #E8F1FB; --lv1-ink: #1E293B; --lv2: #C9DDF4; --lv2-ink: #1E293B;
+  --lv3: #8DB4E2; --lv3-ink: #1E293B; --lv4: #3F6FA8; --lv4-ink: #FFFFFF;
   --radius: 6px; --nav: 232px; --topbar: 48px;
 }
 @media (prefers-color-scheme: dark) {
@@ -25,6 +26,8 @@
   --accent: #FAFAFA; --accent-ink: #111827; --accent-soft: rgb(250 250 250 / 8%);
   --ok: #4ADE80; --ok-soft: rgb(34 197 94 / 16%); --warn: #FACC15; --warn-soft: rgb(234 179 8 / 16%); --bad: #F87171; --bad-soft: rgb(239 68 68 / 16%);
   --lv0: #374151; --lv0-ink: #D1D5DB;
+  --lv1: #DBEAFE; --lv1-ink: #1E293B; --lv2: #93C5FD; --lv2-ink: #1E293B;
+  --lv3: #2563EB; --lv3-ink: #FFFFFF; --lv4: #1E3A8A; --lv4-ink: #FFFFFF;
   }
 }
 :root[data-theme="dark"] {
@@ -33,6 +36,8 @@
   --accent: #FAFAFA; --accent-ink: #111827; --accent-soft: rgb(250 250 250 / 8%);
   --ok: #4ADE80; --ok-soft: rgb(34 197 94 / 16%); --warn: #FACC15; --warn-soft: rgb(234 179 8 / 16%); --bad: #F87171; --bad-soft: rgb(239 68 68 / 16%);
   --lv0: #374151; --lv0-ink: #D1D5DB;
+  --lv1: #DBEAFE; --lv1-ink: #1E293B; --lv2: #93C5FD; --lv2-ink: #1E293B;
+  --lv3: #2563EB; --lv3-ink: #FFFFFF; --lv4: #1E3A8A; --lv4-ink: #FFFFFF;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--ink); font: 400 14px/1.5 var(--font-sans); -webkit-font-smoothing: antialiased; }
@@ -210,17 +215,23 @@ tbody tr:hover > td { background: var(--hover); }
 .drop { border: 1px dashed var(--line); border-radius: var(--radius); padding: 40px; text-align: center; color: var(--muted); cursor: pointer; background: var(--panel); }
 .drop.over, .drop:hover { border-color: var(--accent); color: var(--ink); background: var(--hover); }
 
-.heat { border-collapse: collapse; width: auto; }
+.heat { border-collapse: separate; border-spacing: 0; width: auto; }
 .heat th, .heat td { padding: 0; border: 0; }
-/* thin gridlines, like a spreadsheet: every cell is outlined and the column lines run up into the skill names */
-.heat tbody td { border: 1px solid var(--line); }
-.heat tbody td.who { border-left: 0; }
-.heat thead th:not(.who) { border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
+/* thin gridlines, like a spreadsheet. Each cell draws its own right and bottom line (separate borders, not a collapsed table),
+   so the lines scroll UNDER the sticky name column instead of being drawn across it */
+.heat tbody td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.heat tbody tr:first-child td { border-top: 1px solid var(--line); }
+.heat thead th { border-right: 1px solid var(--line); }
 .heat .cell { width: 36px; height: 34px; border-radius: 0; }
 .heat .cell.unrated { border: 1px dashed var(--muted); }
 .heat thead th { height: 150px; vertical-align: bottom; }
 .heat thead th > div { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; padding: 4px 0; font-size: 12px; font-weight: 500; color: var(--ink); }
-.heat .who { position: sticky; left: 0; background: var(--panel); padding: 6px 14px 6px 4px; white-space: nowrap; z-index: 1; font-weight: 600; }
+.heat .who { position: sticky; left: 0; background: var(--panel); padding: 6px 14px 6px 4px; white-space: nowrap; z-index: 2; font-weight: 600; }
+.heat tbody tr:hover > td.who { background: var(--panel); }  /* the name column stays opaque, so scrolled cells never show through */
+/* the name column sticks to the scroll box's content edge, so the box has no left padding (columns scrolled past the names would
+   otherwise show in that strip); the space moves inside the name column instead */
+.matrix-wrap { padding-left: 0; }
+.matrix-wrap .heat .who { padding-left: 16px; }
 .heat .who a { color: var(--ink); }
 @media (max-width: 680px) {  /* keep room for the skill columns on phones; the full name and roles are in the tooltip */
   .heat .who { max-width: 128px; }
