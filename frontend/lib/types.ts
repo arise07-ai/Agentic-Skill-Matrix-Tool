@@ -80,7 +80,7 @@ export type StaffingResult = {
 
 export type LearningResult = {
   markdown: string; mode: string; warnings: string[]; review_notes?: string[]; coach_notices?: string[];
-  approval_required?: boolean; template_markdown?: string; computed_budget?: string;
+  approval_required?: boolean; template_markdown?: string; computed_budget?: string; computed_schedule?: string[];
   gaps: { skill: string; current: number; target: number; delta: number; related_skill?: string; related_rating?: number }[];
 };
 
