@@ -282,6 +282,57 @@ def verify_picks(raw: object, plan: list[dict], courses: dict[str, list[dict]], 
     return out, notes
 
 
+# A reviewer reason is shown to the learner, so it may not contain internal ids ("c2"), field names ("study_id"), JSON or links.
+_REVIEW_JARGON = re.compile(r"_|\bc\d+\b|\bids?\b|json|https?://|www\.|[`#|<>\[\]{}]", re.I)
+_LOWERCASE_STARTS = {"it", "its", "this", "the", "a", "an", "they", "that", "these", "both", "one"}
+
+
+def _review_reason(value: object) -> str:
+    """The reviewer model's reason as a clause for a sentence, or "" when it cannot be shown as it is."""
+    text = " ".join(str(value or "").split()).strip(" \"'.")
+    if not text or len(text) > 160 or _REVIEW_JARGON.search(text):
+        return ""
+    text, _ = check_output(text)
+    first = text.split(" ", 1)[0]
+    return first.lower() + text[len(first):] if first.lower() in _LOWERCASE_STARTS else text
+
+
+def describe_review(draft: object, picks: dict, by_id: dict[str, dict], review: object) -> list[str]:
+    """What the AI reviewer changed, in plain words for the person, written by CODE from the difference between the planner's draft
+    and the picks the final plan actually uses (after verify_picks). A change the rules then overrode is not mentioned, and the model's
+    own reason is only appended when it is free of internal ids and field names."""
+    rows = draft.get("skills") if isinstance(draft, dict) else None
+    if not isinstance(rows, list):
+        return []
+    before = {str(r.get("skill")): r for r in rows if isinstance(r, dict)}
+    reasons: dict[str, str] = {}
+    for item in review if isinstance(review, list) else []:
+        if isinstance(item, dict) and item.get("skill"):
+            reasons.setdefault(str(item["skill"]), _review_reason(item.get("reason")))
+    notes = []
+    for skill, final in picks.items():
+        old = before.get(skill) or {}
+        changes = []
+        for field, noun in (("study", "course"), ("watch", "video")):
+            new = final.get(field)
+            hit = by_id.get(str(old.get(f"{field}_id")))
+            prev = hit["course"] if hit and hit["skill"] == skill else None
+            if not new or (prev and prev.get("url") == new.get("url") and prev.get("title") == new.get("title")):
+                continue
+            changes.append(f"swapped the {noun} “{prev['title']}” for “{new['title']}”" if prev else f"picked the {noun} “{new['title']}”")
+        course_changed = bool(changes)
+        for field, words in (("why", "why this course suits you"), ("practice", "the practice task")):
+            if field == "why" and course_changed:  # a new course comes with its own reason
+                continue
+            if final.get(field) and final[field] != _clean_text(old.get(field), 220 if field == "practice" else 200):
+                changes.append(f"reworded {words}")
+        if not changes:
+            continue
+        reason = reasons.get(skill, "")
+        notes.append(f"For {skill}, I {' and '.join(changes)}" + (f": {reason}." if reason else "."))
+    return notes[:4]
+
+
 def check_plan_text(markdown: str, gaps: list[dict], plan: list[dict], weeks: int, hours_per_week: int) -> list[str]:
     """Re-check the FACTS of a plan (also after a person edited it): the budget, the skill-gap table, the schedule headings and the hours
     breakdown must agree with the numbers computed from the ratings. Wording is not checked. -> problems (empty = consistent)."""
@@ -598,7 +649,7 @@ def build(req: LearningRequest, require_approval: bool = False) -> dict:
                 "project": project, "skills_json": json.dumps(skills, ensure_ascii=False), "warnings": [],
             })
             picks, notes = verify_picks(out.get("picks"), plan, courses, by_id)
-            review_notes = [str(x)[:200] for x in (out.get("review") or [])][:4]  # what the AI reviewer changed in the draft (code verified the result)
+            review_notes = describe_review(out.get("draft_picks"), picks, by_id, out.get("review"))  # written by code, from what really changed
             warnings += [plain_warning(w) for w in out.get("warnings", [])]
             mode = "llm" if picks else "template"
             if not picks:
