@@ -138,3 +138,5 @@ export type CapacityMap = { day_hours: number; max_pct: number; employees: Recor
 export type AssignedMember = { assignment_id: number; employee_id: number; name: string; position: string; allocation_pct: number; hours: number; other_pct: number; total_pct: number; since: string; approved_by: string; start_date: string | null; end_date: string | null; period_start: string | null; period_end: string | null };
 export type TeamWaiting = { proposal_id: number; action: "assign" | "change" | "remove" | "dates"; employee_id: number | null; employee_name: string; position: string; allocation_pct: number | null; hours: number; period_start?: string | null; period_end?: string | null; requested_by_name?: string };
 export type ProjectTeamData = { brief: { id: number; title: string; status: string; headcount: number | null; roles: string[]; start_date: string | null; end_date: string | null }; members: AssignedMember[]; waiting: TeamWaiting[]; day_hours: number; max_pct: number; total_pct: number; total_hours: number };
+
+export type LearningCoachMessage = { role: "user" | "assistant"; content: string };
