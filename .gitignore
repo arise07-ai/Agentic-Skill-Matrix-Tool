@@ -132,3 +132,5 @@ env/
 # App data: employee records, uploads, vector index, evaluation logs
 *.sqlite
 *.sqlite3
+
+railway.env.backend.ready
