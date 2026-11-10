@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 client = OpenAI(
     # By default, it will look for an environment variable named OPENAI_API_KEY.
     # Alternatively, you can paste it directly here like: api_key="sk-proj-..."
-    api_key=os.environ.get("OPENAI_API_KEY", "REMOVED_KEY")
+    api_key=os.environ["OPENAI_API_KEY"],
 )
 
 # 2. Define the schema structure using Pydantic
